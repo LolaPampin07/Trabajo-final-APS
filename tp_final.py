@@ -29,6 +29,10 @@ print(raw.info)
 # Graficar las señales
 raw.plot(duration=100, n_channels=29)  # duración en segundos y número de canales
 
+# %%
+
+
+
 # %% Frecuency domain
 
 # Filtrado: notch 50 Hz + bandpass 0.5–45 Hz
