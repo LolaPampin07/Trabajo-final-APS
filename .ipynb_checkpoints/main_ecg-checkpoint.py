@@ -89,7 +89,7 @@ def transformada_rapida(x, name):
 
 # %% Estimacion espectral - Welch
 
-def welch(ecg, name):#REVISAR!!!!
+def welch(ecg, name):
     #-----------------PRUEBA COMPARATIVA----------------------
     """
         # --- Welch ---
@@ -408,7 +408,7 @@ def main():
     
     
     files = [file for file in listdir('data')]
-    paciente7 = files[1]
+    paciente7 = files[2]
     ecg, t = leer_archivo(paciente7, 67, 70)
     graficar_archivo(ecg, t, "Paciente7")
     Ff, PSD=transformada_rapida(ecg, "Paciente 7")
