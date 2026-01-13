@@ -1,7 +1,7 @@
 # %% librerias + imports + definicion de variables
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
+from os import listdir
 from scipy import signal as sig
 from scipy.signal import periodogram , get_window
 import pandas as pd
@@ -12,11 +12,23 @@ from numpy.fft import fft
 
 fs = 200  # Hz
 
+
+"""
+Tiempo de sz
+
+paciente1 00:14:36 00:16:12 --> tomo del min 14 hasta el 15
+paciente2 00:24:07 00:25:30 --> tomo del 18 al 33
+min8 = 480s = 480*200=96000
+min24 = 288000
+"""
+
 # %% Lectura  + Graficos ECG sin filtrar
 
-def leer_archivo(path, name):
+def leer_archivo(path, start, stop):
     #Lectura de archivos
-    raw = np.fromfile(path, dtype=np.int16)
+    start *= 12000
+    stop *= 12000
+    raw = np.fromfile('data/' + path, dtype=np.int16)
     gain = 25
     baseline = 26
 
@@ -24,7 +36,7 @@ def leer_archivo(path, name):
     
     t = np.arange(len(ecg_mV)) / fs
     
-    return ecg_mV,t
+    return ecg_mV[start:stop],t[start:stop]
     
 
 def graficar_archivo(ecg_mV, t, name):
@@ -39,7 +51,7 @@ def graficar_archivo(ecg_mV, t, name):
     plt.grid(True)
     plt.show()
     
-    return ecg_mV
+    return
  
 
 
@@ -48,75 +60,107 @@ def graficar_archivo(ecg_mV, t, name):
 # Calculo FFT
 
 #calculo la transformada, su modulo y su argumento
-def transformada_rapida(x, t, name):
+def transformada_rapida(x, name):
     X = fft(x)    
     PDS = np.abs(X)**2
     
     N= len(x)
     df= df = fs / N #resolucion espectral = [[1/(s*muestras)]
-    mbw=N/4 #mitad de banda digital
-    k0= [mbw, mbw + 0.25, mbw + 1/2]
-    f0=np.dot(k0,df)
     
     
     Ff=np.arange(N)*df #mi eje x en hz
-    plt.figure(figsize=(20,20))
-    plt.plot(Ff, np.log10(PDS*(1/N))*10, 'x', label='PDS f= '+str(f0[0]))
+    
+    Ff = Ff[:N//2]
+    PDS = (np.abs(X)**2) / (N * fs)
+    PDS = PDS[:N//2]
+
+    # Gráfico
+    plt.figure(figsize=(20, 10))
+    plt.plot(Ff, 10 * np.log10(PDS + 1e-20), 'x', label=f'FFT - {name}')
     plt.xlim([0, fs/2])
     plt.title(f"PDS [dB] ({name})")
     plt.xlabel('Frecuencia [Hz]')
     plt.ylabel('PDS [dB]')
-    plt.grid()
+    plt.grid(True)
     plt.legend()
-# %% Metodos de estimacion de analisis espectral
-
-def welch(ecg, t, name):
-    # ECG POR PERIODOGRAMA VENTANEADO
-    win_ecg = get_window('hann', len(ecg))
-    ecg_ventaneado=ecg*win_ecg
-    f_ecg, Pxx_ecg = periodogram(ecg, fs)
-
-    plt.figure(figsize=(20,10))
-    plt.plot(f_ecg,10*np.log10(Pxx_ecg)**2)
-    plt.title("ECG (Periodograma ventaneado)")
-    plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Densidad Espectral de Potencia[dB]')
-    plt.grid(True)
     plt.show()
-def periodograma_ventaneado(ecg, t, name):
-    win_ecg = get_window('hann', len(ecg))
-    ecg_ventaneado=ecg*win_ecg
     
-    f_ecg, Pxx_ecg = periodogram(ecg_ventaneado, fs)
+    return Ff, PDS
+
+# %% Estimacion espectral - Welch
+
+def welch(ecg, name):
+    #-----------------PRUEBA COMPARATIVA----------------------
+    """
+        # --- Welch ---
+        nperseg = 1024
+        f_welch, Pxx_welch = sig.welch(ecg, fs=fs, window='boxcar', nperseg=nperseg)
+
+        # --- FFT ---
+        X = fft(ecg)
+        Pxx_fft = (np.abs(X)**2) / (n * fs)  # normalización para PSD
+        Ff = np.arange(n) * (fs / n)
+        # Solo mitad positiva
+        Ff = Ff[:n//2]
+        Pxx_fft = Pxx_fft[:n//2]
+
+        # --- Gráfico comparativo ---
+        plt.figure(figsize=(20, 10))
+        plt.plot(f_welch, 10*np.log10(Pxx_welch + 1e-20), 'o-', label='Welch')
+        plt.plot(Ff, 10*np.log10(Pxx_fft + 1e-20), '-', alpha=0.5, label='FFT directa')
+        plt.title(f'Comparación PSD - {name}')
+        plt.xlabel('Frecuencia [Hz]')
+        plt.ylabel('PSD [dB/Hz]')
+        plt.xlim([0, fs/2])
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+    """
+#sig.welch:
+#    - Divide la señal en segmentos (con posible solapamiento, si se especifica).
+#   - Aplica la ventana a cada segmento.
+#    - Calcula la FFT de cada segmento.
+#   - Promedia los espectros de potencia de todos los segmentos.
+
+#PARAMETROS WELCH
+    cant_seg = 10000000 #cantidad de segmentos ==> mientras mas chico mas varianza
+    win_ecg = "boxcar" #ventana rectangular porque es la utilizada en el paper
+    # tamaño de segmento tentativo
+    n = len(ecg)
+    nperseg_ecg = max(8, n // max(1, cant_seg))  # al menos 8 muestras por segmento
+    nperseg_ecg = min(nperseg_ecg, n)            # no puede exceder la longitud de la señal
     
-    plt.figure(figsize=(20,10))
-    plt.plot(f_ecg,10*np.log10(Pxx_ecg)**2)
-    plt.title("ECG (Periodograma ventaneado)")
+    # Si quedó muy chico, reducimos el número de segmentos para asegurar un tamaño razonable
+    if nperseg_ecg < 64 and n >= 64:
+        nperseg_ecg = 64
+    if nperseg_ecg > n:
+        nperseg_ecg = n
+
+    # nfft al menos nperseg; redondeo a potencia de 2 para eficiencia
+    def _next_pow2(x):
+        return 1 << (int(np.ceil(np.log2(max(1, int(x))))))
+    nfft_ecg = max(nperseg_ecg, _next_pow2(nperseg_ecg))
+    
+    # --- Welch ---
+    f_ecg, Pxx_ecg = sig.welch(ecg, fs=fs, window=win_ecg, nperseg=nperseg_ecg, nfft=nfft_ecg, return_onesided=True, 
+                               average="median", noverlap=nperseg_ecg//2)
+
+    # --- Gráfico ---
+    eps = 1e-20  # para evitar log10(0)
+    plt.figure(figsize=(20, 10))
+    plt.plot(f_ecg, 10 * np.log10(Pxx_ecg + eps), 'x', label=f'PSD (Welch) - {name}')
+    plt.title(f'PSD (Welch) - {name}')
+    plt.ylabel('Densidad Espectral de Potencia [dB]')
     plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Densidad Espectral de Potencia[dB]')
-    plt.grid(True)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.legend()
     plt.show()
-def blackman_tuckey(ecg, t, name, M= None):
-    N = len(ecg)
-
-    if M is None:
-        M = N//20 # Ventana mas chica
-    M = min(M, N // 2 - 1)
-
-    x = np.asarray(ecg)
-    r_full = np.correlate(x, x, mode='full') / N
-    mid = len(r_full) // 2
-    r = r_full[mid - (M - 1) : mid + M]
-
-    window = sig.windows.blackman(len(r))
-    r_windowed = r * window
-
-    Px = np.abs(np.fft.fft(r_windowed, n=N))
-    return Px
-
-
-
     
+    return f_ecg, Pxx_ecg
+ 
+'''  
 #%% ###### Filtrado lineal ########
 # 1) PLANTILLA DE DISEÑO - PASABANDA DIGITAL
 
@@ -351,17 +395,28 @@ plt.tight_layout(rect=[0, 0, 1, 0.96])
 plt.show()
 
 # %% ### Filtrado no lineal ###
-
+'''
 # %% main    
 
 def main():
-    directory_path = Path('data')
-    for file_path in directory_path.iterdir():  # Para cada archivo en la carpeta "data"
-        nombre = file_path.name
-        ecg, t = leer_archivo(file_path, nombre)
-        graficar_archivo(ecg, t, nombre)
-        transformada_rapida(ecg, t, nombre)
+    files = [file for file in listdir('data')]
+    paciente1 = files[0]
+    ecg, t = leer_archivo(paciente1, 14, 17)
+    graficar_archivo(ecg, t, "Paciente 1")
+    transformada_rapida(ecg, "Paciente 1")
+    welch(ecg,"Paciente 1")
+    
+    
+    files = [file for file in listdir('data')]
+    paciente7 = files[2]
+    ecg, t = leer_archivo(paciente7, 67, 70)
+    graficar_archivo(ecg, t, "Paciente7")
+    Ff, PSD=transformada_rapida(ecg, "Paciente 7")
+    f_ecg, pxx_ecg= welch(ecg,"Paciente 7")
 
 if __name__=="__main__":
     main()
     
+
+
+
