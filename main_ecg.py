@@ -5,7 +5,7 @@ from os import listdir
 from scipy import signal as sig
 from scipy.signal import periodogram , get_window
 import pandas as pd
-from pytc2.sistemas_lineales import plot_plantilla
+#from pytc2.sistemas_lineales import plot_plantilla
 import scipy.io as sio
 import wave
 from numpy.fft import fft
@@ -77,7 +77,7 @@ def transformada_rapida(x, name):
     # Gráfico
     plt.figure(figsize=(20, 10))
     plt.plot(Ff, 10 * np.log10(PDS + 1e-20), 'x', label=f'FFT - {name}')
-    plt.xlim([0, fs/2])
+    #plt.xlim([0, fs/2])
     plt.title(f"PDS [dB] ({name})")
     plt.xlabel('Frecuencia [Hz]')
     plt.ylabel('PDS [dB]')
@@ -159,9 +159,10 @@ def welch(ecg, name):#REVISAR!!!!
     plt.show()
     
     return f_ecg, Pxx_ecg
+
+"""
  
-'''  
-#%% ###### Filtrado lineal ########
+# %% ###### Filtrado lineal ########
 # 1) PLANTILLA DE DISEÑO - PASABANDA DIGITAL
 
 wp = (0.8, 35)
@@ -192,11 +193,11 @@ tipo2 = "Cheby 1"
 
 
 ### Respuesta en frecuencia ###
-"""
+
 # freqz_sos = Compute the frequency response of a digital filter in SOS format.
 #        Returns:w = ndarray The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample).
 #                h = ndarray, The frequency response, as complex numbers.
-"""
+
 w1, h1 = sig.freqz_sos(mi_sos1, worN=2048, fs=fs)
 w2, h2 = sig.freqz_sos(mi_sos2, worN=2048, fs=fs)
 
@@ -395,7 +396,8 @@ plt.tight_layout(rect=[0, 0, 1, 0.96])
 plt.show()
 
 # %% ### Filtrado no lineal ###
-'''
+"""
+
 # %% main    
 
 def main():
