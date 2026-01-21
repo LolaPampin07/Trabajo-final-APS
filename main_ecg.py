@@ -5,7 +5,7 @@ from os import listdir
 from scipy import signal as sig
 from scipy.signal import periodogram , get_window
 import pandas as pd
-#from pytc2.sistemas_lineales import plot_plantilla
+from pytc2.sistemas_lineales import plot_plantilla
 import scipy.io as sio
 import wave
 from numpy.fft import fft
@@ -160,54 +160,41 @@ def welch(ecg, name):#REVISAR!!!!
     
     return f_ecg, Pxx_ecg
 
-"""
+
  
 # %% ###### Filtrado lineal ########
+
 # 1) PLANTILLA DE DISEÑO - PASABANDA DIGITAL
 
-wp = (0.8, 35)
-ws = (0.1, 40)
+wp = (0.5, 100) #0.5 es la frecuencia de corte que recomienda el paper de filtrado del ECG y 100 para adultos
+ws = (0.1, 110) # entre 0.1-0.5 Hz tengo la banda de transicion
+
+
+## RECOMENDACION DEL PAPER: FILTRADO BIDIRECCIONAL PARA LIMPIAR RETARDO DE FASE
 
 # Atenuaciones 
 alpha_p = 0.5     # dB
 alpha_s = 20      # dB
 
-# %% 1) DISEÑO IIR (BUTTER - CHEBY1 - CHEBY2 - CAUER)
+### DISEÑO IIR (BUTTER: mayor preservacion de la forma del ECG)
 
 mi_sos_butt  = sig.iirdesign(wp, ws, gpass=alpha_p, gstop=alpha_s, ftype='butter', fs=fs, output='sos')
 
-mi_sos_cauer = sig.iirdesign(wp, ws, gpass=alpha_p, gstop=alpha_s, ftype='ellip', fs=fs, output='sos')
-
-mi_sos_cheb1 = sig.iirdesign(wp, ws, gpass=alpha_p, gstop=alpha_s, ftype='cheby1', fs=fs, output='sos')
-
-mi_sos_cheb2 = sig.iirdesign(wp, ws, gpass=alpha_p, gstop=alpha_s, ftype='cheby2', fs=fs, output='sos')
-
-
-# %% Ejemplo grafico de plantilla de 2 filtros iir
-
-mi_sos1 = mi_sos_cauer
-tipo1 = "Cauer"
-
-mi_sos2 = mi_sos_cheb1
-tipo2 = "Cheby 1"
 
 
 ### Respuesta en frecuencia ###
 
-# freqz_sos = Compute the frequency response of a digital filter in SOS format.
-#        Returns:w = ndarray The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample).
-#                h = ndarray, The frequency response, as complex numbers.
-
-w1, h1 = sig.freqz_sos(mi_sos1, worN=2048, fs=fs)
-w2, h2 = sig.freqz_sos(mi_sos2, worN=2048, fs=fs)
+"""
+ freqz_sos = Compute the frequency response of a digital filter in SOS format.
+       Returns:w = ndarray The frequencies at which h was computed, in the same units as fs. By default, w is normalized to the range [0, pi) (radians/sample).
+              h = ndarray, The frequency response, as complex numbers.
+"""
+w1, h1 = sig.freqz_sos(mi_sos_butt , worN=2048, fs=fs)
 
 # Fase
 fase1 = np.unwrap(np.angle(h1))
 w_rad1 = w1 / (fs/2) * np.pi
 gd1 = -np.diff(fase1) / np.diff(w_rad1)
-fase2 = np.unwrap(np.angle(h2))
-w_rad2 = w2 / (fs/2) * np.pi
-gd2 = -np.diff(fase2) / np.diff(w_rad2)
 
 # GRAFICOS de ejemplo de los filtros
 # CAUER
@@ -215,7 +202,7 @@ plt.figure(figsize=(12, 10))
 fig = plt.gcf()
 
 # ===== TÍTULO GENERAL =====
-fig.suptitle(f'IIR {tipo1}', fontsize=14, fontweight='bold')
+fig.suptitle(f'IIR BUTTER', fontsize=14, fontweight='bold')
 
 # ===== Subplot 1: Magnitud =====
 ax1 = plt.subplot(3, 1, 1)
@@ -239,45 +226,6 @@ plt.legend()
 # ===== Subplot 3: Retardo de grupo =====
 ax3 = plt.subplot(3, 1, 3, sharex=ax1)
 plt.plot(w1[1:], gd1, label='τg')
-plt.title('Retardo de grupo')
-plt.xlabel('Frecuencia [Hz]')
-plt.ylabel('τg [# muestras]')
-plt.grid(True, which='both', ls=':')
-plt.legend()
-
-# Ajuste posicion
-plt.tight_layout(rect=[0, 0, 1, 0.96])
-plt.show()
-
-# CHEBY 1
-plt.figure(figsize=(12, 10))
-fig = plt.gcf()
-
-# ===== TÍTULO GENERAL =====
-fig.suptitle(f'IIR {tipo2}', fontsize=14, fontweight='bold')
-
-# ===== Subplot 1: Magnitud =====
-ax1 = plt.subplot(3, 1, 1)
-plt.plot(w2, 20*np.log10(np.abs(h2)), label='|H(ω)|')
-# Aseguramos que plot_plantilla dibuje en este subplot activándolo
-plt.sca(ax1)
-plot_plantilla('bandpass', wp, alpha_p*2, ws, alpha_s*2, fs)
-plt.title('Magnitud')
-plt.ylabel('|H(ω)| [dB]')
-plt.grid(True, which='both', ls=':')
-plt.legend()
-
-# ===== Subplot 2: Fase =====
-ax2 = plt.subplot(3, 1, 2, sharex=ax1)
-plt.plot(w2, fase2, label='Fase')
-plt.title('Fase')
-plt.ylabel('Fase [rad]')
-plt.grid(True, which='both', ls=':')
-plt.legend()
-
-# ===== Subplot 3: Retardo de grupo =====
-ax3 = plt.subplot(3, 1, 3, sharex=ax1)
-plt.plot(w2[1:], gd2, label='τg')
 plt.title('Retardo de grupo')
 plt.xlabel('Frecuencia [Hz]')
 plt.ylabel('τg [# muestras]')
@@ -396,7 +344,6 @@ plt.tight_layout(rect=[0, 0, 1, 0.96])
 plt.show()
 
 # %% ### Filtrado no lineal ###
-"""
 
 # %% main    
 
