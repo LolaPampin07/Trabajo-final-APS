@@ -110,11 +110,12 @@ def prueba_latidos(ecg,t, peaks):
     
 # %% Construccion temporal de RR
 
-def const_RR (idx_r):
+def const_RR (latidos):
     
-    idx_r = np.asarray(idx_r, dtype=float)
-    t_r = idx_r / FS  # tiempos de ocurrencia de cada latido (s)
+    idx_r = np.asarray(latidos, dtype=float)
+    t_r = latidos / FS  # tiempos de ocurrencia de cada latido (s)
     rr = np.diff(t_r)   # en segundos
+    print(latidos)
 
     good = (rr >= RR_MIN) & (rr <= rr_max) #compruebo eliminar valores absurdos
 
