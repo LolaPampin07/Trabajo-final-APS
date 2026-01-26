@@ -115,7 +115,7 @@ def const_RR (latidos):
     idx_r = np.asarray(latidos, dtype=float)
     t_r = latidos / FS  # tiempos de ocurrencia de cada latido (s)
     rr = np.diff(t_r)   # en segundos
-    print(latidos)
+    
 
     good = (rr >= RR_MIN) & (rr <= rr_max) #compruebo eliminar valores absurdos
 
