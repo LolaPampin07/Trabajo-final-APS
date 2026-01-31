@@ -9,7 +9,11 @@ Created on Wed Jan 21 18:36:22 2026
 
 import matplotlib.pyplot as plt
 from os import listdir
+from scipy import signal as sig
 from scipy.signal import welch, windows
+import pandas as pd
+import scipy.io as sio
+import wave
 from numpy.fft import fft
 from scipy.interpolate import interp1d
 import math
@@ -114,7 +118,6 @@ def prueba_latidos(ecg,t, peaks):
     plt.figure(figsize=(12,4))
     plt.plot(t, ecg, label='ECG')
     plt.plot(t[peaks], ecg[peaks], 'r x', label='R-peaks')
-    #plt.xlim(0,60)
     plt.legend(); plt.xlabel('Tiempo [s]'); plt.ylabel('Voltaje [mV]')
     plt.title('Detección de picos R')
     plt.show()
