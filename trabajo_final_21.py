@@ -96,15 +96,15 @@ def baseline_median(x, fs=FS, win_ms=300):
 def filtro_ecg (ecg):
     ecg=notch_50hz(ecg)
     ecg=bandpass_butter(ecg)
-    ecg=baseline_median(ecg)
+    #ecg=baseline_median(ecg)
     return ecg
 
 # %% Deteccion de latidos
 
 def detect_rpeaks(ecg,t):
     # Filtrado para QRS
-    
-    
+    b, a = butter(2, F_QRS, btype='band', fs=FS) # filtro digital tipo butter pasabanda en rango de frecuencia del complejo QRS de orden 2
+    ecg = filtfilt(b, a, ecg) #filtrado bidereccional
 
     # Altura mínima relativa y distancia mínima entre picos
     # Distancia mínima según HR máxima permitida
@@ -350,7 +350,7 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     
     ecg_post, t_post= leer_archivo(paciente, tiempos[2], tiempos[3])
     latidos_post= detect_rpeaks(ecg_post,t_post)
-    prueba_latidos(ecg_post,t_post, latidos_post)
+    #prueba_latidos(ecg_post,t_post, latidos_post)
     hr_post, tr,  _ , _ = const_RR(latidos_post)
     Ff_post,PSD_post= transformada_rapida(hr_post, f"POST ICTAL {nombre}")
     f_hr_post,pxx_post= welch_psd(hr_post, f"POST ICTAL {nombre}")
@@ -359,13 +359,9 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     presentacion_datos(f_hr_pre,pxx_pre,f_hr_post,pxx_post, nombre, xlim=(0, 2))
     #presentacion_datos(Ff_pre,PSD_pre,Ff_post,PSD_post, nombre, ylim=(min(PSD_pre), max(PSD_post)))
 
-# %% main    
+# %% main - PACIENTES 
 
 def main():
-    
-# %%
-####### PACIENTES#############
-
 
     files = [file for file in listdir('data')]
     # Paciente 1  (sz01: 00:14:36 → 00:16:12)
