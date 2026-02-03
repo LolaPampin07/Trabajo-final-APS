@@ -9,13 +9,12 @@ Created on Wed Jan 21 18:36:22 2026
 
 import matplotlib.pyplot as plt
 from os import listdir
-from scipy.signal import welch, windows
+from scipy.signal import welch, windows, sosfiltfilt, iirnotch, butter, filtfilt, find_peaks
 from numpy.fft import fft
 from scipy.interpolate import interp1d
 import math
-
 import numpy as np
-from scipy.signal import butter, filtfilt, find_peaks
+
 
 
 # %% Variables globales
@@ -26,7 +25,7 @@ F_QRS=[5,15] # [Hz] rango de frecuencia complejo QRS
 FS_hr = 4.0  # Hz frecuencia para muestreo uniforme de HR para aplicacion de la FFT
 
 ## Frecuencia cardiaca minima y maxima (umbral fisiologico) ##
-MIN_HR=30 #latidos/min
+MIN_HR=20 #latidos/min
 MAX_HR=220
 
 RR_MIN = 0.3 #[s]  (200 bpm)
@@ -36,22 +35,7 @@ PRE_ICT1 = 14
 POS_ICT1= 16
 
 
-"""
-####Tiempos de episodios segun pacientes####
-sz01 = ("00:14:36", "00:16:12")
-sz02_01 = ("01:02:43", "01:03:43")
-sz02_02 = ("02:55:51", "02:56:16")  
-sz03_01 = ("01:24:34", "01:26:22")
-sz03_02 = ("02:34:27", "02:36:17")  
-sz04 = ("00:20:10", "00:21:55")
-sz05 = ("00:24:07", "00:25:30")
-sz06_01 = ("00:51:25", "00:52:19")
-sz06_02 = ("02:04:45", "02:06:10") 
-sz07 = ("01:08:02", "01:09:31")
-"""
-
-
-# %% Lectura  + Graficos ECG sin filtrar
+# %% Lectura  + Graficos ECG
 
 def leer_archivo(path, start, stop):
     #Lectura de archivos
@@ -64,6 +48,8 @@ def leer_archivo(path, start, stop):
     ecg_mV = (raw - baseline) / gain
     
     t = np.arange(len(ecg_mV)) / FS
+    
+    ecg_mV= filtro_ecg(ecg_mV)
     
     return ecg_mV[start:stop],t[start:stop]
     
@@ -79,27 +65,60 @@ def graficar_archivo(ecg_mV, t, name):
     plt.show()
     return
 
+# %%Filtrado ECG
+# -------- 1) Notch 50 Hz --------
+def notch_50hz(x,fs=FS, f0=50.0, q=40.0):
+    w0 = f0 / (fs / 2.0)  # frecuencia normalizada
+    b, a = iirnotch(w0, q)
+    return filtfilt(b, a, x) #filtrado bidireccional para eliminar defasaje
+
+# -------- 2) Band-pass 0.5–35 Hz (Butterworth 4°, fase cero) --------
+def bandpass_butter(x,fs=FS, lowcut=0.5, highcut=35.0, order=4):
+    nyq = fs / 2
+    low = lowcut / nyq
+    high = highcut / nyq
+    sos = butter(order, [low, high], btype='bandpass', output='sos')
+    return sosfiltfilt(sos, x)
+
+# -------- 3) Baseline por mediana --------
+def baseline_median(x, fs=FS, win_ms=300):
+
+    win = int(round(win_ms * fs / 1000.0))
+    if win % 2 == 0:
+        win += 1  # ventana impar
+    pad = win // 2
+    xpad = np.pad(x, (pad, pad), mode='reflect')
+    baseline = np.zeros_like(x)
+    for i in range(len(x)):
+        baseline[i] = np.median(xpad[i:i+win])
+    return x - baseline
+
+def filtro_ecg (ecg):
+    ecg=notch_50hz(ecg)
+    ecg=bandpass_butter(ecg)
+    ecg=baseline_median(ecg)
+    return ecg
+
 # %% Deteccion de latidos
 
 def detect_rpeaks(ecg,t):
     # Filtrado para QRS
     
-    b, a = butter(2, F_QRS, btype='band', fs=FS) # filtro digital tipo butter pasabanda en rango de frecuencia del complejo QRS de orden 2
-    xf = filtfilt(b, a, ecg) #filtrado bidereccional
+    
 
     # Altura mínima relativa y distancia mínima entre picos
     # Distancia mínima según HR máxima permitida
     min_dist = int(FS * 60.0 / MAX_HR) #distancia que tendrian los latidos si hr=220 lat/min
 
     # Altura mínima: percentil relativo --> umbral adaptativo
-    med = np.median(xf) #promedio robusto
-    mad = np.median(np.abs(xf - med)) # MAD = Median Absolute Deviation --> a cada elemento le resto la media y calculo la media del modulo de resta
+    med = np.median(ecg) #promedio robusto
+    mad = np.median(np.abs(ecg - med)) # MAD = Median Absolute Deviation --> a cada elemento le resto la media y calculo la media del modulo de resta
     k=4 # define un umbral minimo de altura
     
     h = med + k * 1.4826 * mad   # 1.4826: factor que convierte la MAD en una desviacion estandar (distribucion gaussiana)
     #mediana + 4 veces el estimador de desviacion estandar
     
-    peaks, _ = find_peaks(xf, distance=min_dist, height=h)
+    peaks, _ = find_peaks(ecg, distance=min_dist, height=h)
 
     # Filtrar picos demasiado cercanos según HR fisiológico
     rr = np.diff(peaks) / FS
@@ -183,13 +202,13 @@ def const_RR (latidos):
 
 def grafico_hr_det(t_u, hr_u, trend, name):
     
-    hr_detr = hr_u - trend 
+    #hr_detr = hr_u - trend 
     
     
     # HR(t) cruda vs detrendida
     plt.figure(figsize=(12,4))
     plt.plot(t_u, hr_u, label='HR interpolada (bpm)', alpha=0.6)
-    plt.plot(t_u, hr_detr, label='HR sin tendencia (bpm)', color='r')
+    #plt.plot(t_u, hr_detr, label='HR sin tendencia (bpm)', color='r')
     plt.plot(t_u, trend, label='Tendencia polinomial grado 4', color='k', lw=2)
     plt.xlabel('Tiempo [s]'); plt.ylabel('Latidos por minuto [#bpm]'); plt.title(f'HR - {name}')
     plt.legend(); plt.grid(True); plt.show()  
@@ -318,7 +337,7 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     ecg, t = leer_archivo(paciente, tiempos[0] , tiempos[-1])
     #graficar_archivo(ecg, t, "Paciente 1") #grafica el ECG
     latidos = detect_rpeaks(ecg,t)
-    prueba_latidos(ecg,t, latidos)
+    #prueba_latidos(ecg,t, latidos)
     hr_d, hr_u, t_u, trend = const_RR(latidos)
     grafico_hr_det(t_u, hr_u, trend, f"HR ENTERO {nombre}")
     #Ff,PSD= transformada_rapida(hr_d, f"HR ENTERO {nombre}")
@@ -331,6 +350,7 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     
     ecg_post, t_post= leer_archivo(paciente, tiempos[2], tiempos[3])
     latidos_post= detect_rpeaks(ecg_post,t_post)
+    prueba_latidos(ecg_post,t_post, latidos_post)
     hr_post, tr,  _ , _ = const_RR(latidos_post)
     Ff_post,PSD_post= transformada_rapida(hr_post, f"POST ICTAL {nombre}")
     f_hr_post,pxx_post= welch_psd(hr_post, f"POST ICTAL {nombre}")
