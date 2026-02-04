@@ -364,32 +364,38 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
 def main():
 
     files = [file for file in listdir('data')]
-    # Paciente 1  (sz01: 00:14:36 → 00:16:12)
-    analizar_paciente(0, 'Paciente 1', [8.6, 12.600, 16.500, 20.500], files)
+    # # Paciente 1  (sz01: 00:14:36 → 00:16:12)
+    # analizar_paciente(0, 'Paciente 1', [8.6, 12.600, 16.500, 20.500], files)
     
-    # Paciente 2  (sz02_01: 01:02:43 → 01:03:43)
-    analizar_paciente(1, 'Paciente 2 - Episodio 1', [56.717, 60.717, 64.217, 68.217], files)    
-    analizar_paciente(1, 'Paciente 2 – Episodio 2', [169.850, 173.850, 176.767, 180.767], files)
+    # # Paciente 2  (sz02_01: 01:02:43 → 01:03:43)
+    # analizar_paciente(1, 'Paciente 2 - Episodio 1', [56.717, 60.717, 64.217, 68.217], files)    
+    # analizar_paciente(1, 'Paciente 2 – Episodio 2', [169.850, 173.850, 176.767, 180.767], files)
 
     
-    # Paciente 3  (sz03_01: 01:24:34 → 01:26:22)
-    analizar_paciente(2, 'Paciente 3 - Episodio 1', [78.567, 82.567, 86.867, 90.867], files)
-    analizar_paciente(2, 'Paciente 3 – Episodio 2', [148.450, 152.450, 156.783, 160.783], files)
+    # # Paciente 3  (sz03_01: 01:24:34 → 01:26:22)
+    # analizar_paciente(2, 'Paciente 3 - Episodio 1', [78.567, 82.567, 86.867, 90.867], files)
+    # analizar_paciente(2, 'Paciente 3 – Episodio 2', [148.450, 152.450, 156.783, 160.783], files)
     
     
-    # Paciente 4  (sz04: 00:20:10 → 00:21:55)
-    analizar_paciente(3, 'Paciente 4', [14.167, 18.167, 22.417, 26.417], files)
+    # # Paciente 4  (sz04: 00:20:10 → 00:21:55)
+    # analizar_paciente(3, 'Paciente 4', [14.167, 18.167, 22.417, 26.417], files)
     
-    # Paciente 5  (sz05: 00:24:07 → 00:25:30)
-    analizar_paciente(4, 'Paciente 5', [18.117, 22.117, 26.000, 30.000], files)
+    # # Paciente 5  (sz05: 00:24:07 → 00:25:30)
+    # analizar_paciente(4, 'Paciente 5', [18.117, 22.117, 26.000, 30.000], files)
     
-    # Paciente 6  (sz06_01: 00:51:25 → 00:52:19)
-    analizar_paciente(5, 'Paciente 6 - Episodio 1', [45.417, 49.417, 52.817, 56.817], files)
-    analizar_paciente(5, 'Paciente 6 – Episodio 2', [118.750, 122.750, 126.667, 130.667], files)
+    # # Paciente 6  (sz06_01: 00:51:25 → 00:52:19)
+    # analizar_paciente(5, 'Paciente 6 - Episodio 1', [45.417, 49.417, 52.817, 56.817], files)
+    # analizar_paciente(5, 'Paciente 6 – Episodio 2', [118.750, 122.750, 126.667, 130.667], files)
     
-    # Paciente 7  (sz07: 01:08:02 → 01:09:31)
-    analizar_paciente(6, 'Paciente 7', [62.033, 66.033, 70.017, 74.017], files)
-    
+    # # Paciente 7  (sz07: 01:08:02 → 01:09:31)
+    # analizar_paciente(6, 'Paciente 7', [62.033, 66.033, 70.017, 74.017], files)
+  
+#  prueba profe
+    paciente = files[6]
+    ecg, t = leer_archivo(paciente, 70.017, 74.017)
+    graficar_archivo(ecg, t, "Paciente 1") #grafica el ECG
+    latidos = detect_rpeaks(ecg,t)
+    prueba_latidos(ecg,t, latidos)
 
     
 
