@@ -22,7 +22,7 @@ import numpy as np
 fs=200 #Hz --> establecida en paper 
 F_QRS=[5,15] # [Hz] rango de frecuencia complejo QRS
 
-FS_hr = 4.0  # Hz frecuencia para muestreo uniforme de HR para aplicacion de la FFT
+fs_hr = 4.0  # Hz frecuencia para muestreo uniforme de HR para aplicacion de la FFT
 
 ## Frecuencia cardiaca minima y maxima (umbral fisiologico) ##
 MIN_HR=20 #latidos/min
@@ -47,20 +47,18 @@ def leer_archivo(path, start, stop):
 
     ecg_mV = (raw - baseline) / gain
     
-    t = np.arange(len(ecg_mV)) / FS
+    t = np.arange(len(ecg_mV)) / fs
     
     return ecg_mV[start:stop],t[start:stop]
     
 
-def graficar_archivo(ecg_mV, t, name):
-    #Graficos ECG
-    plt.figure(figsize=(12, 4))
-    plt.plot(t, ecg_mV, linewidth=1)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Voltage [mV]")
-    plt.title(f"ECG ({name})")
-    plt.grid(True)
-    plt.show()
+def graficar_ecg(ecg_f, ecg_mV, t, r_locs, name):
+    #Graficos ECG, ECG filtrado, picos R detectados
+    plt.figure(figsize=(12,4))
+    plt.plot(t, ecg_mV, label='ECG crudo', alpha=0.4)
+    plt.plot(t, ecg_f, label='ECG filtrado', linewidth=1)
+    plt.scatter(r_locs/fs, ecg_f[r_locs], color='r', s=20, label='R-peaks')
+    plt.legend(); plt.xlabel('Tiempo [s]'); plt.ylabel('Voltage [mV]'); plt.grid(True); plt.title(plt.title(f"ECG ({name})"))
     return
 
 # %%Filtrado ECG
@@ -123,51 +121,11 @@ def detect_rpeaks(ecg, fs, band=(8,20), win_ms=120, refractory_ms=200, prominenc
     return r_locs, ecg_f, y_int, thr
 
 
-# def detect_rpeaks(ecg,t):
-
-#     # Altura mínima relativa y distancia mínima entre picos
-#     # Distancia mínima según HR máxima permitida
-#     min_dist = int(FS * 60.0 / MAX_HR) #distancia que tendrian los latidos si hr=220 lat/min
-
-#     # Altura mínima: percentil relativo --> umbral adaptativo
-#     med = np.median(ecg) #promedio robusto
-#     mad = np.median(np.abs(ecg - med)) # MAD = Median Absolute Deviation --> a cada elemento le resto la media y calculo la media del modulo de resta
-#     k=4 # define un umbral minimo de altura
-    
-#     h = med + k * 1.4826 * mad   # 1.4826: factor que convierte la MAD en una desviacion estandar (distribucion gaussiana)
-#     #mediana + 4 veces el estimador de desviacion estandar
-    
-#     peaks, _ = find_peaks(ecg, distance=min_dist, height=h)
-
-#     # Filtrar picos demasiado cercanos según HR fisiológico
-#     rr = np.diff(peaks) / FS
-#     rr_ok = (rr > 60.0/MAX_HR) & (rr < 60.0/MIN_HR)
-#     keep = np.insert(rr_ok, 0, True)
-#     peaks = peaks[keep]
-    
-
-#     return peaks
-
-
-
-def prueba_latidos(ecg,t, peaks):
-    #Funcion para comprobar la deteccion de latidos graficamente
-    
-    plt.figure(figsize=(12,4))
-    plt.plot(t, ecg, label='ECG')
-    plt.plot(t[peaks], ecg[peaks], 'r x', label='R-peaks')
-    #plt.xlim(0,60)
-    plt.legend(); plt.xlabel('Tiempo [s]'); plt.ylabel('Voltaje [mV]')
-    plt.title('Detección de picos R')
-    plt.show()
-    
-    return
 
     
-# %% Construccion temporal de 
+# %% Construccion temporal de HR a partir de latidos R (RR) y su interpolacion uniforme para FFT/PSD
 
-
-def const_RR (ecg, r_locs, fs=FS, fs_hr=4.0, hr_bounds=(40, 180), detrend_deg=None):
+def const_RR (ecg, r_locs, fs, fs_hr, hr_bounds=(30, 190), detrend_deg=4):
     """
     A partir de picos R (índices), devuelve:
       - t_hr: tiempos de cada HR instantánea (s)
@@ -175,8 +133,10 @@ def const_RR (ecg, r_locs, fs=FS, fs_hr=4.0, hr_bounds=(40, 180), detrend_deg=No
       - t_u, hr_u: HR uniformizada a fs_hr (opcionalmente con detrend si se pide)
       - (trend si detrend_deg no es None)
     """
+
     r_locs = np.asarray(r_locs).astype(int)
     r_locs = r_locs[(r_locs > 0) & (r_locs < len(ecg))]  # seguridad
+
     if len(r_locs) < 2:
         raise ValueError("No hay suficientes latidos para calcular RR/HR.")
 
@@ -197,13 +157,13 @@ def const_RR (ecg, r_locs, fs=FS, fs_hr=4.0, hr_bounds=(40, 180), detrend_deg=No
     t_hr = t_hr[mask]
     hr = hr[mask]
 
-    # Si querés devolver sólo HR por latido:
+    
     results = {
         "t_hr": t_hr,
         "hr": hr,
     }
 
-    # 5) Serie HR uniforme (para graficar suave o HRV)
+    # 5) Serie HR uniforme 
     if len(t_hr) >= 2:
         t0, tf = t_hr[0], t_hr[-1]
         n = int(np.floor((tf - t0) * fs_hr)) + 1
@@ -228,104 +188,35 @@ def const_RR (ecg, r_locs, fs=FS, fs_hr=4.0, hr_bounds=(40, 180), detrend_deg=No
             results.update({"t_u": t_u, "hr_u": hr_u})
     return results
 
-# def const_RR (latidos):
-    
-#     #latidos = np.asarray(latidos, dtype=float)
-#     t_r = latidos / FS  # tiempos de ocurrencia de cada latido (s)
-#     rr = np.diff(t_r)   # en segundos --> np.diff resta el actual con el anterior == armo los intervalor RR
-    
-
-#     good = (rr >= RR_MIN) & (rr <= rr_max) #compruebo eliminar valores absurdos
-
-#     rr_clean = rr[good]
-#     t = t_r[1:][good]   # tiempos asociados a cada RR
-    
-#     hr = 60/rr_clean # frecuencia cardiaca  
-    
-
-# #### INTERPOLACION
-#     t_u = np.arange(t[0], t[-1], 1.0/FS_hr)   # eje de tiempo uniforme
-    
-#     # Interpolación lineal (suele ser suficiente para HRV lenta)
-#     f = interp1d(t, hr, kind='linear', fill_value='extrapolate', bounds_error=False)
-#     hr_u = f(t_u)   # HR(t) uniforme, en bpm
-    
-#     # Ajuste polinomial de grado 4 (paper) sobre HR_u vs t_u
-#     p = np.polyfit(t_u, hr_u, deg=4)
-#     trend = np.polyval(p, t_u)
-    
-#        # señal de HR sin tendencia (bpm)
-    
-#     t_u_good = []
-#     hr_u_good = []
-#     trend_good = []
-    
-#     for ti, hri, trendi in zip(t_u, hr_u, trend):
-#         if 50 < hri < 100:
-#             t_u_good.append(ti)
-#             hr_u_good.append(hri)
-#             trend_good.append(trendi)
-    
-#     t_u_good = np.array(t_u_good)
-#     hr_u_good = np.array(hr_u_good)
-    
-#     plt.figure()
-#     plt.plot(t_u_good,hr_u_good)
-
-#     hr_detr = hr_u_good - trend_good
-#     N = len(hr_detr)
-    
-#     # Ventana rectangular (implícita); FFT de una sola cara
-#     HR = np.fft.rfft(hr_detr, n=N)
-#     freqs = np.fft.rfftfreq(N, d=1.0/FS_hr)
-    
-#     # PSD no normalizada (proporcional)
-#     PSD = (np.abs(HR)**2) / N
-    
-#     # Recorte de banda 0.01–0.10 Hz
-#     f_lo, f_hi = 0.01, 0.10
-#     band = (freqs >= f_lo) & (freqs <= f_hi) #array de booleanos
-#     freq_band = freqs[band]
-#     psd_band  = PSD[band]
-    
-#     # Pico espectral dentro de 0.01–0.10 Hz
-#     if np.any(band):
-#         kmax = np.argmax(psd_band)
-#         f_peak = freq_band[kmax]
-#         p_peak = psd_band[kmax]
-#     else:
-#         f_peak = np.nan
-#         p_peak = np.nan
-    
-#     print(f"Pico en banda 0.01–0.10 Hz: {f_peak:.4f} Hz (potencia relativa={p_peak:.3g})")
-#     return hr_detr, hr_u_good, t_u_good, trend_good
-
-def grafico_hr_det(t_u, hr_u, trend, name):
-    
-    #hr_detr = hr_u - trend 
-    
-    
-    # HR(t) cruda vs detrendida
+def grafico_hr(t_hr, hr, name,t_u):
+    # HR por latido
     plt.figure(figsize=(12,4))
-    plt.plot(t_u, hr_u, label='HR interpolada (bpm)', alpha=0.6)
-    #plt.plot(t_u, hr_detr, label='HR sin tendencia (bpm)', color='r')
-    plt.plot(t_u, trend, label='Tendencia polinomial grado 4', color='k', lw=2)
-    plt.ylim(30, 120)
-    plt.xlabel('Tiempo [s]'); plt.ylabel('Latidos por minuto [#bpm]'); plt.title(f'HR - {name}')
-    plt.legend(); plt.grid(True); plt.show()  
+    plt.plot(t_hr, hr, '-o', label='HR por latido (bpm)')
+    plt.xlabel('Tiempo [s]'); plt.ylabel('HR[bpm]'); plt.grid(True); plt.legend(); plt.title(f"FC instantánea ({name})")
+    plt.show()
+
+    if t_u is not None:
+        plt.figure(figsize=(10,3))
+        plt.plot(t_u, hr_u, label='HR uniforme (4 Hz)')
+        if "trend" in res:
+            plt.plot(t_u, res["trend"], label='Tendencia (polinomio)', linestyle='--')
+            plt.plot(t_u, res["hr_detr"], label='HR sin tendencia')
+        plt.xlabel('Tiempo [s]'); plt.ylabel('Latidos por minuto [#bpm]'); plt.grid(True); plt.legend(); plt.title('Serie de HR uniformizada')
+        plt.show()
     return
+
 def transformada_rapida(x, name):
     X = fft(x)    
     PDS = np.abs(X)**2
     
     N= len(x)
-    df= df = FS_hr / N #resolucion espectral = [[1/(s*muestras)]
+    df= df = fs_hr / N #resolucion espectral = [[1/(s*muestras)]
     
     
     Ff=np.arange(N)*df #mi eje x en hz
     
     Ff = Ff[:N//2]
-    PDS = (np.abs(X)**2) / (N * FS_hr)
+    PDS = (np.abs(X)**2) / (N * fs_hr)
     PDS = PDS[:N//2]
 
     # Gráfico
@@ -352,7 +243,7 @@ def welch_psd(x, name="PSD WELCH",
     if n < 4:
         raise ValueError("La señal es demasiado corta.")
 
-    nperseg = int(seg_len_sec * FS_hr)
+    nperseg = int(seg_len_sec * fs_hr)
     nperseg = max(64, min(nperseg, n))
     win = windows.hann(nperseg, sym=False)
     noverlap = int(nperseg * overlap)
@@ -365,7 +256,7 @@ def welch_psd(x, name="PSD WELCH",
     detrend_arg = False if detrend_already_done else 'constant'
 
     f, Pxx = welch(x,
-                   fs=FS_hr,
+                   fs=fs_hr,
                    window=win,
                    nperseg=nperseg,
                    noverlap=noverlap,
@@ -436,28 +327,37 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     
     paciente = archivos[indice]
     ecg, t = leer_archivo(paciente, tiempos[0] , tiempos[-1])
-    #graficar_archivo(ecg, t, "Paciente 1") #grafica el ECG
-    latidos = detect_rpeaks(ecg)
-    prueba_latidos(ecg,t, latidos)
-    hr_d, hr_u, t_u, trend = const_RR(ecg,latidos)
-    grafico_hr_det(t_u, hr_u, trend, f"HR ENTERO {nombre}")
+    r_locs, ecg_f, y_int, thr = detect_rpeaks(ecg, fs, band=(8,20), win_ms=120, refractory_ms=220)
+    res = const_RR(ecg, r_locs)
+
+    t_hr, hr = res["t_hr"], res["hr"]
+    t_u, hr_u = res.get("t_u", None), res.get("hr_u", None)
+
+    graficar_ecg(ecg_f,ecg, t, r_locs, nombre) #grafica el ECG
+    grafico_hr(t_hr, hr, nombre, t_u) #grafica la HR por latido
     #Ff,PSD= transformada_rapida(hr_d, f"HR ENTERO {nombre}")
 
     ecg_pre,t_pre= leer_archivo(paciente, tiempos[0], tiempos[1])
-    #latidos_pre= detect_rpeaks(ecg_pre,t_pre)
-    latidos_pre= detect_rpeaks(ecg_pre)
-    hr_pre, tr_pre, _ , _= const_RR(ecg_pre,latidos_pre)
-    Ff_pre,PSD_pre= transformada_rapida(hr_pre, f"PRE ICTAL {nombre}")
-    f_hr_pre,pxx_pre= welch_psd(hr_pre, f"PRE ICTAL {nombre}")
+    r_locs_pre, ecg_f_pre, y_int_pre, thr_pre = detect_rpeaks(ecg_pre, fs, band=(8,20), win_ms=120, refractory_ms=220)
+    res_pre = const_RR(ecg_pre, r_locs_pre, fs, fs_hr, hr_bounds=(MIN_HR, MAX_HR), detrend_deg=4)
+
+    t_hr_pre, hr_pre = res_pre["t_hr"], res_pre["hr"]
+    t_u_pre, hr_u_pre = res_pre.get("t_u", None), res_pre.get("hr_u", None)
+
     
+    Ff_pre,PSD_pre= transformada_rapida(hr_u_pre, f"PRE ICTAL {nombre}")
+    f_hr_pre,pxx_pre= welch_psd(hr_u_pre, f"PRE ICTAL {nombre}")
+    
+
+
     ecg_post, t_post= leer_archivo(paciente, tiempos[2], tiempos[3])
-    latidos_post= detect_rpeaks(ecg_post)
-    #latidos_post= detect_rpeaks(ecg_post,t_post)
+    r_locs_post, ecg_f_post, y_int_post, thr_post = detect_rpeaks(ecg_post, fs, band=(8,20), win_ms=120, refractory_ms=220)
+    res_post = const_RR(ecg_post, r_locs_post, fs, fs_hr, hr_bounds=(MIN_HR, MAX_HR), detrend_deg=4)
+    t_hr_post, hr_post = res_post["t_hr"], res_post["hr"]
+    t_u_post, hr_u_post = res_post.get("t_u", None), res_post.get("hr_u", None)    
+    Ff_post,PSD_post= transformada_rapida(hr_u_post, f"POST ICTAL {nombre}")
+    f_hr_post,pxx_post= welch_psd(hr_u_post, f"POST ICTAL {nombre}")
     
-    #prueba_latidos(ecg_post,t_post, latidos_post)
-    hr_post, tr,  _ , _ = const_RR(ecg_post,latidos_post)
-    Ff_post,PSD_post= transformada_rapida(hr_post, f"POST ICTAL {nombre}")
-    f_hr_post,pxx_post= welch_psd(hr_post, f"POST ICTAL {nombre}")
     
     
     presentacion_datos(f_hr_pre,pxx_pre,f_hr_post,pxx_post, nombre)
