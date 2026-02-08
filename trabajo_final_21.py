@@ -52,14 +52,68 @@ def leer_archivo(path, start, stop):
     return ecg_mV[start:stop],t[start:stop]
     
 
-def graficar_ecg(ecg_f, ecg_mV, t, r_locs, name):
-    #Graficos ECG, ECG filtrado, picos R detectados
-    plt.figure(figsize=(12,4))
-    plt.plot(t, ecg_mV, label='ECG crudo', alpha=0.4)
-    plt.plot(t, ecg_f, label='ECG filtrado', linewidth=1)
-    plt.scatter(r_locs/fs, ecg_f[r_locs], color='r', s=20, label='R-peaks')
-    plt.legend(); plt.xlabel('Tiempo [s]'); plt.ylabel('Voltage [mV]'); plt.grid(True); plt.title(plt.title(f"ECG ({name})"))
-    return
+def graficar_ecg(ecg_f, ecg_mV, t, r_locs, name, tz, banda_color="#2ca02c", dpi=150):
+    """
+    Grafica ECG crudo, ECG filtrado y picos R; resalta la banda de tiempo del episodio.
+
+    Parámetros
+    ----------
+    ecg_f : array
+        ECG filtrado (mismas muestras que ecg_mV)
+    ecg_mV : array
+        ECG crudo (en mV)
+    t : array
+        Vector tiempo en segundos (puede empezar en t[0] != 0)
+    r_locs : array (int)
+        Índices de muestra de picos R sobre los vectores ecg_f/ecg_mV
+    name : str
+        Texto para el título
+    tz : tuple(float, float)
+        (t_lo, t_hi) en segundos para sombrear el episodio (mismas unidades que t)
+    fs : float
+        Frecuencia de muestreo [Hz]
+    banda_color : str
+        Color de la banda de episodio
+    dpi : int
+        DPI de la figura
+
+    Retorna
+    -------
+    fig, ax : objetos de Matplotlib
+    """
+    # Estilo y figura
+    plt.style.use("seaborn-v0_8-whitegrid")
+    fig, ax = plt.subplots(figsize=(14, 6), dpi=dpi)
+
+    # Curvas
+    ax.plot(t, ecg_mV, label='ECG crudo', alpha=0.4)
+    ax.plot(t, ecg_f,  label='ECG filtrado', linewidth=1.0)
+
+    # Picos R en el mismo origen temporal que t
+    t0 = t[0]
+    t_r = t0 + (np.asarray(r_locs, dtype=int) / fs)
+    # Filtrar por seguridad posibles índices fuera de rango
+    r_mask = (r_locs >= 0) & (r_locs < len(ecg_f))
+    t_r = t0 + (np.asarray(r_locs[r_mask]) / fs)
+
+    ax.scatter(t_r, ecg_f[r_locs[r_mask]], color='r', s=20, label='R-peaks', zorder=3)
+
+    # Banda de episodio (en segundos)
+    f_lo, f_hi = tz
+    ax.axvspan(f_lo, f_hi, color=banda_color, alpha=0.15,
+               label=f"Episodio {f_lo:.2f}–{f_hi:.2f} s")
+    ax.axvline(f_lo, color=banda_color, linestyle="--", linewidth=1.2, alpha=0.8)
+    ax.axvline(f_hi, color=banda_color, linestyle="--", linewidth=1.2, alpha=0.8)
+
+    # Decoración
+    ax.set_xlabel('Tiempo [s]')
+    ax.set_ylabel('Voltaje [mV]')
+    ax.set_title(f"ECG ({name})")
+    ax.legend(loc='best')
+    ax.grid(True)
+
+    fig.tight_layout()
+    return 
 
 # %%Filtrado ECG
 def ecg_filter(ecg, fs, low=8.0, high=20.0, order=4, q_notch=30):
@@ -76,7 +130,7 @@ def ecg_filter(ecg, fs, low=8.0, high=20.0, order=4, q_notch=30):
     return y 
 # %% Deteccion de latidos
 
-def detect_rpeaks(ecg, fs, band=(8,20), win_ms=120, refractory_ms=200, prominence=None):
+def detect_rpeaks(ecg, fs=fs, band=(8,20), win_ms=120, refractory_ms=200, prominence=None):
     """
     Devuelve índices de picos R en la señal original.
     """
@@ -125,7 +179,7 @@ def detect_rpeaks(ecg, fs, band=(8,20), win_ms=120, refractory_ms=200, prominenc
     
 # %% Construccion temporal de HR a partir de latidos R (RR) y su interpolacion uniforme para FFT/PSD
 
-def const_RR (ecg, r_locs, fs, fs_hr, hr_bounds=(30, 190), detrend_deg=4):
+def const_RR (ecg, r_locs, fs=fs, fs_hr=fs_hr, hr_bounds=(40, 180), detrend_deg=10):
     """
     A partir de picos R (índices), devuelve:
       - t_hr: tiempos de cada HR instantánea (s)
@@ -188,19 +242,19 @@ def const_RR (ecg, r_locs, fs, fs_hr, hr_bounds=(30, 190), detrend_deg=4):
             results.update({"t_u": t_u, "hr_u": hr_u})
     return results
 
-def grafico_hr(t_hr, hr, name,t_u):
+def grafico_hr(res, name):
     # HR por latido
     plt.figure(figsize=(12,4))
-    plt.plot(t_hr, hr, '-o', label='HR por latido (bpm)')
+    plt.plot(res["t_hr"], res["hr"], label='HR por latido (bpm)')
     plt.xlabel('Tiempo [s]'); plt.ylabel('HR[bpm]'); plt.grid(True); plt.legend(); plt.title(f"FC instantánea ({name})")
     plt.show()
 
-    if t_u is not None:
+    if res["t_u"] is not None:
         plt.figure(figsize=(10,3))
-        plt.plot(t_u, hr_u, label='HR uniforme (4 Hz)')
+        plt.plot(res['t_u'],res['hr_u'], label='HR uniforme (4 Hz)')
         if "trend" in res:
-            plt.plot(t_u, res["trend"], label='Tendencia (polinomio)', linestyle='--')
-            plt.plot(t_u, res["hr_detr"], label='HR sin tendencia')
+            plt.plot(res['t_u'], res["trend"], label='Tendencia (polinomio)', linestyle='--')
+            plt.plot(res['t_u'], res["hr_detr"], label='HR sin tendencia')
         plt.xlabel('Tiempo [s]'); plt.ylabel('Latidos por minuto [#bpm]'); plt.grid(True); plt.legend(); plt.title('Serie de HR uniformizada')
         plt.show()
     return
@@ -329,35 +383,24 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     ecg, t = leer_archivo(paciente, tiempos[0] , tiempos[-1])
     r_locs, ecg_f, y_int, thr = detect_rpeaks(ecg, fs, band=(8,20), win_ms=120, refractory_ms=220)
     res = const_RR(ecg, r_locs)
-
-    t_hr, hr = res["t_hr"], res["hr"]
-    t_u, hr_u = res.get("t_u", None), res.get("hr_u", None)
-
-    graficar_ecg(ecg_f,ecg, t, r_locs, nombre) #grafica el ECG
-    grafico_hr(t_hr, hr, nombre, t_u) #grafica la HR por latido
+    tz= (14*60+36, 16*60+12)
+    graficar_ecg(ecg_f,ecg, t, r_locs, nombre, tz) #grafica el ECG
+    grafico_hr(res, nombre) #grafica la HR por latido
     #Ff,PSD= transformada_rapida(hr_d, f"HR ENTERO {nombre}")
 
     ecg_pre,t_pre= leer_archivo(paciente, tiempos[0], tiempos[1])
     r_locs_pre, ecg_f_pre, y_int_pre, thr_pre = detect_rpeaks(ecg_pre, fs, band=(8,20), win_ms=120, refractory_ms=220)
     res_pre = const_RR(ecg_pre, r_locs_pre, fs, fs_hr, hr_bounds=(MIN_HR, MAX_HR), detrend_deg=4)
-
-    t_hr_pre, hr_pre = res_pre["t_hr"], res_pre["hr"]
-    t_u_pre, hr_u_pre = res_pre.get("t_u", None), res_pre.get("hr_u", None)
-
-    
-    Ff_pre,PSD_pre= transformada_rapida(hr_u_pre, f"PRE ICTAL {nombre}")
-    f_hr_pre,pxx_pre= welch_psd(hr_u_pre, f"PRE ICTAL {nombre}")
+    Ff_pre,PSD_pre= transformada_rapida(res_pre['hr_u'], f"PRE ICTAL {nombre}")
+    f_hr_pre,pxx_pre= welch_psd(res_pre['hr_u'], f"PRE ICTAL {nombre}")
     
 
 
     ecg_post, t_post= leer_archivo(paciente, tiempos[2], tiempos[3])
     r_locs_post, ecg_f_post, y_int_post, thr_post = detect_rpeaks(ecg_post, fs, band=(8,20), win_ms=120, refractory_ms=220)
     res_post = const_RR(ecg_post, r_locs_post, fs, fs_hr, hr_bounds=(MIN_HR, MAX_HR), detrend_deg=4)
-    t_hr_post, hr_post = res_post["t_hr"], res_post["hr"]
-    t_u_post, hr_u_post = res_post.get("t_u", None), res_post.get("hr_u", None)    
-    Ff_post,PSD_post= transformada_rapida(hr_u_post, f"POST ICTAL {nombre}")
-    f_hr_post,pxx_post= welch_psd(hr_u_post, f"POST ICTAL {nombre}")
-    
+    Ff_post,PSD_post= transformada_rapida(res_post['hr_u'], f"POST ICTAL {nombre}")
+    f_hr_post,pxx_post= welch_psd(res_post['hr_u'], f"POST ICTAL {nombre}")
     
     
     presentacion_datos(f_hr_pre,pxx_pre,f_hr_post,pxx_post, nombre)
@@ -369,7 +412,7 @@ def main():
 
     files = [file for file in listdir('data')]
     # # Paciente 1  (sz01: 00:14:36 → 00:16:12)
-    #analizar_paciente(0, 'Paciente 1', [8.6, 12.600, 16.500, 20.500], files)
+    analizar_paciente(0, 'Paciente 1', [10.6, 13.500, 16.5, 22], files)
     
     # # Paciente 2  (sz02_01: 01:02:43 → 01:03:43)
     #analizar_paciente(1, 'Paciente 2 - Episodio 1', [56.717, 60.717, 64.217, 68.217], files)    
@@ -392,7 +435,7 @@ def main():
     #analizar_paciente(5, 'Paciente 6 – Episodio 2', [118.750, 122.750, 126.667, 130.667], files)
     
     # # Paciente 7  (sz07: 01:08:02 → 01:09:31)
-    analizar_paciente(6, 'Paciente 7', [62.033, 66.033, 70.017, 74.017], files)
+    #analizar_paciente(6, 'Paciente 7', [62.033, 66.033, 70.017, 74.017], files)
   
 
 
