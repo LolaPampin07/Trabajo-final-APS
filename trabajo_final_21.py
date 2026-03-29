@@ -29,24 +29,8 @@ def analizar_paciente(indice, nombre, tiempos, archivos):
     
     #filtromediana= filtrado_ecg.filt_mediana(ecg)
     filtromediana= filtrado_ecg.filt_mediana(filtro_lineal)
-    filtrado_ecg.splines_cubicos(filtro_lineal)
-    
-    
+    latidos= filtrado_ecg.splines_cubicos(filtro_lineal)
 
-
-
-
-    
-    
-    # r_locs, ecg_f, y_int, thr = deteccion_picos.detect_rpeaks(ecg, variables_globales.fs, band=(8,20), win_ms=120, refractory_ms=220, plantilla=True)
-    # r_locs=deteccion_picos.matched_filter_ecg(ecg_f)
-    # res = rr_hr.const_RR(ecg, r_locs)
-    # tz= (14*60+36, 16*60+12) #tiempo del episodio en segundos
-    # leer_archivo.graficar_ecg(ecg_f,ecg, t, r_locs, nombre, tz) #grafica el ECG
-        
-    
-    # rr_hr.grafico_hr(res, nombre) #grafica la HR por latido
-    # #Ff,PSD= transformada_rapida(hr_d, f"HR ENTERO {nombre}")
 
     # ecg_pre,t_pre= leer_archivo.abrir_archivo(paciente, tiempos[0], tiempos[1])
     # r_locs_pre, ecg_f_pre, y_int_pre, thr_pre = deteccion_picos.detect_rpeaks(ecg_pre, variables_globales.fs, band=(8,20), win_ms=120, refractory_ms=220)

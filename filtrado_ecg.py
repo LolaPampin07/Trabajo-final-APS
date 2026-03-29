@@ -18,10 +18,10 @@ from scipy import signal
 from scipy.signal import sosfiltfilt,  iirdesign, sosfreqz
 import variables_globales
 import scipy.io as sio
+import deteccion_picos
 
 # %%Filtrado LINEAL ECG
 def ecg_filter(ecg, t, mostrar= True):
-
 
     fs = variables_globales.fs
 
@@ -154,8 +154,8 @@ def ecg_filter(ecg, t, mostrar= True):
 
 # eliminacion de picos
 def filt_mediana (ecg):
-    filtrada = signal.medfilt(ecg, 201)
-    filtrada_600 = signal.medfilt(filtrada, 601)
+    filtrada = signal.medfilt(ecg, 11)
+    filtrada_600 = signal.medfilt(filtrada, 31)
     
     plt.figure(figsize=(15,5))
     plt.title('Estimación')
@@ -204,9 +204,8 @@ def filt_mediana (ecg):
 # %% ---------  SPLINES CUBICOS --------------
 
 def splines_cubicos(ecg):
-    sio.whosmat('./ecg.mat')
-    mat_struct = sio.loadmat('./ecg.mat')
-    qrs_detections = mat_struct['qrs_detections'].squeeze()
+
+    qrs_detections = deteccion_picos.matched_filter_ecg(ecg)
     M = len(qrs_detections)
 
     puntos_spline = np.array(qrs_detections - 110, dtype=int).flatten()
@@ -231,4 +230,4 @@ def splines_cubicos(ecg):
     plt.grid(True)
     plt.xlabel('Muestras')
     plt.show()
-    return
+    return qrs_detections

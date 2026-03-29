@@ -1,15 +1,26 @@
 # %% LIBRERIAS
 
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, lfilter
 import numpy as np
-from scipy.signal import lfilter
 import scipy.io as sio
 
+
 import variables_globales
-import filtrado_ecg
 
+def det_lat_filt_adp (ecg):
+    # ----------------------------
+    # 1) Preprocesar el patrón (cero media y normalización)
+    # ----------------------------
+    mat = sio.loadmat('./ecg.mat')
+    patron = mat['qrs_pattern1'].flatten() - np.mean(mat['qrs_pattern1'].flatten()) #para tener area neta nula, util para filtrar
+    plt.figure()
+    plt.plot(patron) #muestro el patron que utilizo para detectar latidos
+    plt.title("PATRON PARA DETECTAR LATIDOS")
+    patron_norm = np.linalg.norm(patron)
+    patron = patron / patron_norm
 
+    return
 
 # %% Deteccion de latidos - Filtro adaptado
 def matched_filter_ecg(
@@ -24,15 +35,18 @@ def matched_filter_ecg(
 ):
     # ----------------------------
     # 1) Preprocesar el patrón (cero media y normalización)
+    # ----------------------------    
+    # ----------------------------
+    # 1) Preprocesar el patrón (cero media y normalización)
     # ----------------------------
     mat = sio.loadmat('./ecg.mat')
     patron = mat['qrs_pattern1'].flatten() - np.mean(mat['qrs_pattern1'].flatten()) #para tener area neta nula, util para filtrar
     plt.figure()
     plt.plot(patron) #muestro el patron que utilizo para detectar latidos
     plt.title("PATRON PARA DETECTAR LATIDOS")
-    
     patron_norm = np.linalg.norm(patron)
     patron = patron / patron_norm
+
 
 
     # Si la polaridad típica de la correlación es negativa, invierto patrón --> (útil si el QRS dominante es negativo o la referencia está invertida).
@@ -139,4 +153,31 @@ def matched_filter_ecg(
     plt.tight_layout()
 
     return qrs_idx
+
+def filtro_adp(ecg):
+    sio.whosmat('./ecg.mat')
+    mat_struct = sio.loadmat('./ecg.mat')
+    patron = mat_struct['qrs_pattern1'].flatten()
+    patron_2 = patron - np.mean(patron) #para tener area neta nula, util para filtrar
+
+    ecg_detection = lfilter(b=patron_2, a=1, x=ecg)
+
+    ecg_detection_abs = np.abs(ecg_detection)/np.std(np.abs(ecg_detection))
+    ecg_one_lead_dev = ecg/np.std(ecg)
+
+    mis_qrs, _ = find_peaks(ecg_detection_abs, height=1, distance=300) #300 parametro electrofisiologico
+
+    plt.figure(figsize=(15,5))
+    plt.plot(ecg_one_lead_dev, label = 'ECG original')
+    plt.plot(ecg_detection_abs[57:], label = 'Salida Matched Filter')
+    plt.legend()
+    plt.show()
+
+    plt.figure(figsize=(15,5))
+    plt.plot(ecg_one_lead_dev[:5000], label = 'ECG original')
+    plt.plot(ecg_detection_abs[57:5000], label = 'Salida Matched Filter')
+    plt.legend()
+    plt.grid(True)
+
+    return mis_qrs
 
