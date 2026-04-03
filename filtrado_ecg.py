@@ -21,7 +21,7 @@ import scipy.io as sio
 import deteccion_picos
 
 # %%Filtrado LINEAL ECG
-def ecg_filter(ecg, t, mostrar= True):
+def ecg_filter_butter(ecg, t, mostrar= True):
 
     fs = variables_globales.fs
 
