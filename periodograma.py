@@ -9,35 +9,35 @@ from scipy.signal import welch, windows
 from numpy.fft import fft
 import math
 import numpy as np
-import variables_globales
 import matplotlib.pyplot as plt
 
 # %%FFT
-def transformada_rapida(x, name):
+def transformada_rapida(x, name, fs_hr=4, mostrar=False):
     X = fft(x)    
     PDS = np.abs(X)**2
     
     N= len(x)
-    df= df = variables_globales.fs_hr / N #resolucion espectral = [[1/(s*muestras)]
+    df= fs_hr / N #resolucion espectral = [[1/(s*muestras)]
     
     
     Ff=np.arange(N)*df #mi eje x en hz
     
     Ff = Ff[:N//2]
-    PDS = (np.abs(X)**2) / (N * variables_globales.fs_hr)
+    PDS = (np.abs(X)**2) / (N * fs_hr)
     PDS = PDS[:N//2]
 
-    # Gráfico
-    # plt.figure(figsize=(20, 10))
-    # plt.plot(Ff, 10 * np.log10(PDS + 1e-20), 'x-', label='FFT')
-    # plt.xlim([0, FS_hr/2])
-    # plt.title("PDS [dB] ")
-    # plt.xlabel('Frecuencia [Hz]')
-    # plt.ylabel('PDS [dB]')
-    # plt.title(f'PSD (FFT) - {name}')
-    # plt.grid(True)
-    # plt.legend()
-    # plt.show()
+#    Gráfico
+    if mostrar:
+        plt.figure(figsize=(20, 10))
+        plt.plot(Ff, 10 * np.log10(PDS + 1e-20), 'x-', label='FFT')
+        plt.xlim([0, fs_hr/2])
+        plt.title("PDS [dB] ")
+        plt.xlabel('Frecuencia [Hz]')
+        plt.ylabel('PDS [dB]')
+        plt.title(f'PSD (FFT) - {name}')
+        plt.grid(True)
+        plt.legend()
+        plt.show()
     
     return Ff, PDS
 

@@ -7,8 +7,6 @@ Created on Thu Feb 19 17:51:38 2026
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import numpy as np
-
-import variables_globales
 # %% Construccion temporal de HR a partir de latidos R (RR) y su interpolacion uniforme para FFT/PSD
 
 import numpy as np

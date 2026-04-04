@@ -3,11 +3,6 @@
 Created on Thu Feb 19 10:42:10 2026
 
 @author: lolyy
-
-# IDEA: 
-    filtrado lineal para mitigar ruido muscular y contaminacion externa
-    filtrado no lineal para linea de base
-    filtro adaptado (no lineal) p/ deteccion de latidos
 """
 
 #%% librerias
@@ -16,9 +11,70 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal 
 from scipy.signal import sosfiltfilt,  iirdesign, sosfreqz
-import variables_globales
-import scipy.io as sio
-import deteccion_picos
+from scipy.interpolate import CubicSpline
+
+
+# %% Detrend polinomio grado 4
+
+def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
+    """ 
+    tomo una frecuencia de muestreo regular, 4 es lo tipico para hr
+    grado 4 como en el paper
+    x = hr [bpm]
+    # IDEA: remover linea de tendencia c/ cuadrados minimos  
+    """
+
+    # %% Preparo el eje del tiempo y la señal
+    t = np.asarray(t).astype(float)
+    x = np.asarray(x).astype(float)
+
+    # eliminar NaN/inf
+    m = np.isfinite(t) & np.isfinite(x)
+    t, x = t[m], x[m]
+
+    # ordenar por tiempo
+    idx = np.argsort(t)
+    t, x = t[idx], x[idx]
+
+    # eliminar tiempos duplicados (requisito CubicSpline)
+    uniq = np.diff(t, prepend=t[0]-1) > 0
+    t, x = t[uniq], x[uniq]
+
+    # %% eje de timepo --> grid uniforme
+    dt = 1 / fs
+    tu = np.arange(t[0], t[-1], dt)
+
+    # %% interpolación
+    spline = CubicSpline(t, x, bc_type='natural')
+    xu = spline(tu)
+    
+    # detrend polinomial (grado  como el paper)
+    # para estabilidad numérica, centramos el tiempo4
+    tc = tu - tu.mean()
+    coef = np.polyfit(tc, xu, deg=deg)
+    trend = np.polyval(coef, tc)
+    xu_dt = xu - trend
+# %% grafico para ver resultados
+    if mostrar:
+        plt.figure(figsize=(12,6))
+
+        plt.subplot(2,1,1)
+        plt.plot(tu, xu, label="HR interpolada", alpha=0.8)
+        plt.plot(tu, trend, label="Tendencia (polinomio)", linewidth=2)
+        plt.ylabel("HR [bpm]")
+        plt.title("HR VS HR DETREND")
+        plt.grid(True)
+        plt.legend()
+
+        plt.subplot(2,1,2)
+        plt.plot(tu, xu_dt, label="HR detrendeada")
+        plt.grid(True)
+        plt.xlabel("Tiempo [s]")
+
+    #tu : tiempos uniformes, xu : señal interpolada, xudt: señal interpolada y detrendeada, trend : tendencia estimada (polinomio)
+    return tu, xu, xu_dt, trend
+
+
 
 # %%Filtrado LINEAL ECG
 def ecg_filter_butter(ecg, t, mostrar= True):
@@ -202,7 +258,6 @@ def filt_mediana (ecg):
     return
 
 # %% ---------  SPLINES CUBICOS --------------
-
 def splines_cubicos(ecg):
 
     qrs_detections = deteccion_picos.matched_filter_ecg(ecg)
