@@ -58,6 +58,10 @@ def analizar_paciente(record_name):
     periodograma.presentacion_datos(ff_pre_fft, psd_pre_fft, ff_post_fft, psd_post_fft, name="PSD HR FFT")
     periodograma.presentacion_datos(ff_pre_welch, psd_pre_welch, ff_post_welch, psd_post_welch, name="PSD HR Welch")
 
+    # HR ya interpolada y detrendeada
+    f_pre, P_pre, f_post, P_post = periodograma.fft_pre_post(hr_pre_dt, hr_post_dt)
+   
+
 # %% main - PACIENTES 
 
 def main():

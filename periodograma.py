@@ -7,12 +7,75 @@ Created on Thu Feb 19 12:12:15 2026
 
 from scipy.signal import welch, windows
 from numpy.fft import fft
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
+# %% resultados como en el paper
+import numpy as np
+import matplotlib.pyplot as plt
+
+def fft_pre_post(
+    x_pre,
+    x_post,
+    fs=4.0,
+    banda=(0.01, 0.1),
+    xlim=(0, 0.4),
+    db=False,
+    mostrar= True,
+    name="HR FFT"
+):
+
+    def _fft(x):
+        x = np.asarray(x)
+        x = x - np.mean(x)  #saco la media        
+        N = len(x)
+
+        X = np.fft.fft(x)
+        f = np.fft.fftfreq(N, d=1/fs)
+
+        mask = f >= 0
+        return f[mask], np.abs(X[mask])**2 #solo frecuencias positivas
+
+    # FFT
+    f_pre, P_pre = _fft(x_pre)
+    f_post, P_post = _fft(x_post)
+
+    if mostrar:
+        eps = 1e-12
+
+        plt.figure(figsize=(12,6))
+
+        if db:
+            plt.plot(f_pre, 10*np.log10(P_pre + eps),
+                     label="PRE ICTAL", linewidth=2)
+            plt.plot(f_post, 10*np.log10(P_post + eps),
+                     label="POST ICTAL", linewidth=2)
+            plt.ylabel("Amplitud espectral [dB]")
+        else:
+            plt.plot(f_pre, P_pre, label="PRE ICTAL", linewidth=2)
+            plt.plot(f_post, P_post, label="POST ICTAL", linewidth=2)
+            plt.ylabel("Amplitud espectral")
+
+        # Banda de interés
+        f_lo, f_hi = banda
+        plt.axvspan(f_lo, f_hi, color="green", alpha=0.15,
+                    label=f"Banda {f_lo}–{f_hi} Hz")
+        plt.axvline(f_lo, color="green", linestyle="--", alpha=0.8)
+        plt.axvline(f_hi, color="green", linestyle="--", alpha=0.8)
+
+        plt.xlim(xlim)
+        plt.xlabel("Frecuencia [Hz]")
+        plt.title(f"FFT ritmo cardíaco – {name}")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return f_pre, P_pre, f_post, P_post
+
 # %%FFT
 def transformada_rapida(x, name, fs_hr=4, mostrar=False):
+    
     X = fft(x)    
     PDS = np.abs(X)**2
     
@@ -42,37 +105,16 @@ def transformada_rapida(x, name, fs_hr=4, mostrar=False):
     return Ff, PDS
 
 # %% PSD POR WELCH
-def welch_psd(x, name="PSD WELCH",
-              seg_len_sec=60,
-              overlap=0.5,
-              detrend_already_done=True):
+def welch_psd(x,fs_hr=4, win = "hamming"):
 
-    n = len(x)
-    if n < 4:
-        raise ValueError("La señal es demasiado corta.")
+    #.shape devuelve tuplas con las dimensiones del array
+    N = x.shape[0] #solo el elemento 0 --> largo
+    # Parámetros de Welch
+    cant_promedios = 30
+    nperseg = N// cant_promedios
+    nfft = 3 * nperseg
 
-    nperseg = int(seg_len_sec * variables_globales.fs_hr)
-    nperseg = max(64, min(nperseg, n))
-    win = windows.hann(nperseg, sym=False)
-    noverlap = int(nperseg * overlap)
-
-    def next_pow2(x):
-        return 2 ** math.ceil(math.log2(max(1, int(x))))
-    nfft = max(nperseg, next_pow2(nperseg))
-
- 
-    detrend_arg = False if detrend_already_done else 'constant'
-
-    f, Pxx = welch(x,
-                   fs=variables_globales.fs_hr,
-                   window=win,
-                   nperseg=nperseg,
-                   noverlap=noverlap,
-                   nfft=nfft,
-                   detrend=detrend_arg,   # <- clave
-                   return_onesided=True,
-                   average='median',
-                   scaling='density')
+    f, Pxx = welch(x, window=win, fs= fs_hr, nperseg=nperseg, nfft=nfft, return_onesided=True, average='median', scaling='density')
     return f, Pxx
 
 # %% Resultados finales
