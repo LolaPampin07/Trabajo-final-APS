@@ -51,7 +51,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
     # detrend polinomial (grado  como el paper)
     # para estabilidad numérica, centramos el tiempo4
     tc = tu - tu.mean()
-    coef = np.polyfit(tc, xu, deg=deg)
+    coef = np.polyfit(tc, xu, deg=deg) #utiliza cuadrados minimos
     trend = np.polyval(coef, tc)
     xu_dt = xu - trend
 # %% grafico para ver resultados
@@ -61,8 +61,8 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
         plt.subplot(2,1,1)
         plt.plot(tu, xu, label="HR interpolada", alpha=0.8)
         plt.plot(tu, trend, label="Tendencia (polinomio)", linewidth=2)
-        plt.ylabel("HR [bpm]")
-        plt.title("HR VS HR DETREND")
+        plt.ylabel("HR [latido/s]")
+        plt.xlabel("Tiempo [s]")
         plt.grid(True)
         plt.legend()
 
@@ -70,6 +70,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
         plt.plot(tu, xu_dt, label="HR detrendeada")
         plt.grid(True)
         plt.xlabel("Tiempo [s]")
+        plt.ylabel("HR [latido/s]")
 
     #tu : tiempos uniformes, xu : señal interpolada, xudt: señal interpolada y detrendeada, trend : tendencia estimada (polinomio)
     return tu, xu, xu_dt, trend

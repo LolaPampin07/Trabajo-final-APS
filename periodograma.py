@@ -43,32 +43,56 @@ def fft_pre_post(
     if mostrar:
         eps = 1e-12
 
-        plt.figure(figsize=(12,6))
+        fig, axs = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
 
-        if db:
-            plt.plot(f_pre, 10*np.log10(P_pre + eps),
-                     label="PRE ICTAL", linewidth=2)
-            plt.plot(f_post, 10*np.log10(P_post + eps),
-                     label="POST ICTAL", linewidth=2)
-            plt.ylabel("Amplitud espectral [dB]")
-        else:
-            plt.plot(f_pre, P_pre, label="PRE ICTAL", linewidth=2)
-            plt.plot(f_post, P_post, label="POST ICTAL", linewidth=2)
-            plt.ylabel("Amplitud espectral")
-
-        # Banda de interés
         f_lo, f_hi = banda
-        plt.axvspan(f_lo, f_hi, color="green", alpha=0.15,
-                    label=f"Banda {f_lo}–{f_hi} Hz")
-        plt.axvline(f_lo, color="green", linestyle="--", alpha=0.8)
-        plt.axvline(f_hi, color="green", linestyle="--", alpha=0.8)
 
-        plt.xlim(xlim)
-        plt.xlabel("Frecuencia [Hz]")
-        plt.title(f"FFT ritmo cardíaco – {name}")
-        plt.grid(True)
-        plt.legend()
-        plt.tight_layout()
+        # ===== PRE ICTAL =====
+        if db:
+            axs[0].plot(f_pre, 10*np.log10(P_pre + eps),
+                        linewidth=2, label="PRE ICTAL")
+            axs[0].set_ylabel("Amplitud espectral [dB]")
+        else:
+            axs[0].plot(f_pre, P_pre,
+                        linewidth=2, label="PRE ICTAL")
+            axs[0].set_ylabel("Amplitud espectral")
+
+        axs[0].axvspan(f_lo, f_hi, color="green", alpha=0.15)
+        axs[0].axvline(f_lo, color="green", linestyle="--", alpha=0.8)
+        axs[0].axvline(f_hi, color="green", linestyle="--", alpha=0.8)
+
+        axs[0].set_title("PRE ICTAL")
+        axs[0].grid(True)
+        axs[0].legend()
+
+        # ===== POST ICTAL =====
+        if db:
+            axs[1].plot(f_post, 10*np.log10(P_post + eps),
+                        linewidth=2, label="POST ICTAL")
+            axs[1].set_ylabel("Amplitud espectral [dB]")
+        else:
+            axs[1].plot(f_post, P_post,
+                        linewidth=2, label="POST ICTAL")
+            axs[1].set_ylabel("Amplitud espectral")
+
+        axs[1].axvspan(f_lo, f_hi, color="green", alpha=0.15,
+                    label=f"Banda {f_lo}–{f_hi} Hz")
+        axs[1].axvline(f_lo, color="green", linestyle="--", alpha=0.8)
+        axs[1].axvline(f_hi, color="green", linestyle="--", alpha=0.8)
+
+        axs[1].set_title("POST ICTAL")
+        axs[1].grid(True)
+        axs[1].legend()
+
+        # ===== Ajustes comunes =====
+        axs[1].set_xlim(xlim)
+        axs[1].set_xlabel("Frecuencia [Hz]")
+
+        axs[0].set_ylim(0, 250)
+        axs[1].set_ylim(0, 250)
+
+        fig.suptitle(f"FFT ritmo cardíaco – {name}", fontsize=14)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
         plt.show()
 
     return f_pre, P_pre, f_post, P_post
@@ -92,7 +116,7 @@ def transformada_rapida(x, name, fs_hr=4, mostrar=False):
 #    Gráfico
     if mostrar:
         plt.figure(figsize=(20, 10))
-        plt.plot(Ff, 10 * np.log10(PDS + 1e-20), 'x-', label='FFT')
+        plt.plot(Ff, PDS, 'x-', label='FFT')
         plt.xlim([0, fs_hr/2])
         plt.title("PDS [dB] ")
         plt.xlabel('Frecuencia [Hz]')
@@ -128,17 +152,16 @@ def presentacion_datos(
     dpi=150
 ):
 
-    eps = 1e-20  # estabilidad numérica para log10
 
     # Estilo base
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(14, 6), dpi=dpi)
 
     # Curvas PSD en dB
-    ax.plot(f_pre, 10*np.log10(pxx_pre + eps), 
+    ax.plot(f_pre, pxx_pre, 
             label="PRE ICTAL", 
             color="#1f77b4", linewidth=2.2)
-    ax.plot(f_post, 10*np.log10(pxx_post + eps), 
+    ax.plot(f_post, pxx_post, 
             label="POST ICTAL", 
             color="#d62728", linewidth=2.2)
 
@@ -153,7 +176,7 @@ def presentacion_datos(
 
     # Etiquetas y título
     ax.set_xlabel("Frecuencia [Hz]", fontsize=12)
-    ax.set_ylabel("PSD [dB]", fontsize=12)
+    ax.set_ylabel("PSD ", fontsize=12)
     ax.set_title(f"PSD ritmo cardíaco – {name}", fontsize=14)
 
     # Límites opcionales

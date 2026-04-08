@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 DB_PATH = "dat" #nombre de la carpeta donde esta la info
 
-def leer_archivo(record_name="sz01", mostrar= True):
+def leer_archivo(record_name="sz01", mostrar= False):
 
     # Leer el registro ECG 
     ruta = os.path.join(DB_PATH, record_name)
@@ -34,8 +34,9 @@ def leer_archivo(record_name="sz01", mostrar= True):
         plt.figure(figsize=(12, 4))
         plt.plot(t, ecg, label="ECG", linewidth=1)
         plt.plot(r_peaks / fs, ecg[r_peaks],'ro',markersize=4, label="R-peaks (.ari)")
-        plt.xlabel("Tiempo (s)")
-        plt.ylabel("Amplitud")
+        plt.xlabel("Tiempo [s]")
+        plt.xlim(seizure_times[0])
+        plt.ylabel("Amplitud[mV]")
         plt.title("ECG con latidos detectados (archivo .ari)")
         plt.legend()
         plt.grid(True)
