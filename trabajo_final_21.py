@@ -13,8 +13,6 @@ import leer_archivo
 import filtrado_ecg
 import periodograma
 import rr_hr
-import presentacion_datos
-import wfdb
 
 # %% Invocacion de funciones presentacion de los datos
 
@@ -24,28 +22,28 @@ def analizar_paciente(record_name):
     ecg, t, fs, seizure_times, r_peaks = leer_archivo.leer_archivo(record_name)
 
     # %% construccion intervalos RR y frecuencia cardiaca 
-    rr, hr, t_hr=rr_hr.const_RR(r_peaks, fs)
+    rr, hr, t_hr=rr_hr.const_RR(r_peaks)
 
     # %% definicion ventana preictal y postictal
-    ventana_pre = [seizure_times[0][0] - 240, seizure_times[0][0]-100]
+    ventana_pre = [seizure_times[0][0] - 240, seizure_times[0][0]-120]
     mask_pre = (t_hr >= ventana_pre[0]) & (t_hr <= ventana_pre[1])
     hr_pre = hr[mask_pre]
     t_pre = t_hr[mask_pre]
 
-    ventana_post = [seizure_times[0][1]+140, seizure_times[0][1] + 470]
+    ventana_post = [seizure_times[0][1]+120, seizure_times[0][1] + 300]
     mask_post = (t_hr >= ventana_post[0]) & (t_hr <= ventana_post [1])
     hr_post = hr[mask_post]
     t_post = t_hr[mask_post]
 
-    rr_hr.chequeo(t_hr, hr, t_pre, hr_pre, t_post, hr_post, seizure_times)
+    #rr_hr.chequeo(t_hr, hr, t_pre, hr_pre, t_post, hr_post, seizure_times)
 
     # %% detrend polinomio
     # TOTAL
-    tu, hr_u, hr_dt, trend = filtrado_ecg.interp_y_detrend(t_hr, hr, fs=4.0, deg=4)
+    tu, hr_u, hr_dt, trend = filtrado_ecg.interp_y_detrend(t_hr, hr)
     # PRE
-    tu_pre, hr_pre_u, hr_pre_dt, trend_pre = filtrado_ecg.interp_y_detrend(t_pre, hr_pre, fs=4.0, deg=4)
+    tu_pre, hr_pre_u, hr_pre_dt, trend_pre = filtrado_ecg.interp_y_detrend(t_pre, hr_pre)
     # POST
-    tu_post, hr_post_u, hr_post_dt, trend_post = filtrado_ecg.interp_y_detrend(t_post, hr_post, fs=4.0, deg=4)
+    tu_post, hr_post_u, hr_post_dt, trend_post = filtrado_ecg.interp_y_detrend(t_post, hr_post)
 
     # %% Espectro
     # por FFT
@@ -53,8 +51,8 @@ def analizar_paciente(record_name):
     ff_post_fft, psd_post_fft= periodograma.transformada_rapida(hr_post_dt, "FFT HR det post")
 
     # Welch
-    ff_pre_welch, psd_pre_welch= periodograma.transformada_rapida(hr_pre_dt, "Welch HR det pre")
-    ff_post_welch, psd_post_welch= periodograma.transformada_rapida(hr_post_dt, "Welch HR det post")
+    ff_pre_welch, psd_pre_welch= periodograma.welch_psd(hr_pre_dt)
+    ff_post_welch, psd_post_welch= periodograma.welch_psd(hr_post_dt)
 
     # Resultados finales
     #periodograma.presentacion_datos(ff_pre_fft, psd_pre_fft, ff_post_fft, psd_post_fft, name="PSD HR FFT")

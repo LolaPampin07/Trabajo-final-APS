@@ -70,7 +70,7 @@ def leer_archivo(record_name="sz01", mostrar= False):
             plt.title(f"{record_name} – Seizure {i+1}")
             plt.grid(True)
             plt.show()
-
+    r_peaks= r_peaks / fs # latidos en tiempo
     return ecg, t, fs, seizure_times, r_peaks
 
 def hms_to_seconds(hms): # de hh:mm:ss a entero

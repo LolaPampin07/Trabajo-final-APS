@@ -12,22 +12,21 @@ import numpy as np
 import numpy as np
 import matplotlib.pyplot as plt
 
-def const_RR(latidos, fs, mostrar=True):
-    latidos = np.asarray(latidos) #paso latidos a array
+def const_RR(latidos, mostrar=False):
+    latidos = np.asarray(latidos)#paso latidos a array
     rr_vect= np.diff(latidos)
     hr = 60/rr_vect 
-    t_latidos= latidos/fs #esta en muestras
-    t_hr = t_latidos[:-1] + rr_vect/2  #[:-1] --> Toma todos menos el último
+    t_hr = latidos[:-1] + rr_vect/2  #[:-1] --> Toma todos menos el último
     if mostrar:
        plt.figure(figsize=(12, 8))
        # Subplot 1: RR
        plt.subplot(2, 1, 1)
        plt.plot(rr_vect, label='Segmentos RR')
-       plt.xlabel('Índice de latido')
-       plt.ylabel('RR [ms]')
+       plt.xlabel('# Indice de latido')
+       plt.ylabel('RR [s]')
        plt.grid(True)
        plt.legend()
-       plt.title("Construcción del vector RR")
+       #plt.title("Construcción del vector RR")
        
        plt.subplot(2, 1, 2)
        plt.plot(t_hr,hr, label='Frecuencia cardiaca')
@@ -47,7 +46,7 @@ def chequeo (t_hr, hr, t_pre, hr_pre, t_post, hr_post, seizure_time):
     plt.axvline(seizure_time[0][0], color='k', linestyle='--', label='Onset')
     plt.axvline(seizure_time[0][1], color='k', linestyle='--')
     plt.xlabel('Tiempo [s]')
-    plt.ylabel('HR [latido/s]')
+    plt.ylabel('HR [bpm]')
     plt.legend()
     plt.grid(True)
     plt.show()

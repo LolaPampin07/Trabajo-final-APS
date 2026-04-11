@@ -16,7 +16,7 @@ from scipy.interpolate import CubicSpline
 
 # %% Detrend polinomio grado 4
 
-def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
+def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
     """ 
     tomo una frecuencia de muestreo regular, 4 es lo tipico para hr
     grado 4 como en el paper
@@ -61,7 +61,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
         plt.subplot(2,1,1)
         plt.plot(tu, xu, label="HR interpolada", alpha=0.8)
         plt.plot(tu, trend, label="Tendencia (polinomio)", linewidth=2)
-        plt.ylabel("HR [latido/s]")
+        plt.ylabel("HR [bpm]")
         plt.xlabel("Tiempo [s]")
         plt.grid(True)
         plt.legend()
@@ -70,7 +70,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
         plt.plot(tu, xu_dt, label="HR detrendeada")
         plt.grid(True)
         plt.xlabel("Tiempo [s]")
-        plt.ylabel("HR [latido/s]")
+        plt.ylabel("HR [bpm]")
 
     #tu : tiempos uniformes, xu : señal interpolada, xudt: señal interpolada y detrendeada, trend : tendencia estimada (polinomio)
     return tu, xu, xu_dt, trend
@@ -78,7 +78,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= True):
 
 
 # %%Filtrado LINEAL ECG
-def ecg_filter_butter(ecg, t, mostrar= True):
+def ecg_filter_butter(ecg, t, mostrar= False):
 
     fs = variables_globales.fs
 
