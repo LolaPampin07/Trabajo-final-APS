@@ -34,7 +34,7 @@ def fft_pre_post(
         f = np.fft.fftfreq(N, d=1/fs)
 
         mask = f >= 0
-        return f[mask], np.abs(X[mask])**2
+        return f[mask], np.abs(X[mask])**2 /(N * fs)
 
     # FFT
     f_pre, P_pre = _fft(x_pre)
@@ -70,7 +70,7 @@ def fft_pre_post(
         axs[0].axvspan(f_lo, f_hi, color="green", alpha=0.15)
         axs[0].axvline(f_lo, color="green", linestyle="--", alpha=0.8)
         axs[0].axvline(f_hi, color="green", linestyle="--", alpha=0.8)
-        #axs[0].set_ylim(ylim)
+        axs[0].set_ylim(ylim)
         axs[0].set_title("PRE ICTAL")
         axs[0].grid(True)
         axs[0].legend()

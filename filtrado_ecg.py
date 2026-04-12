@@ -10,11 +10,39 @@ Created on Thu Feb 19 10:42:10 2026
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal 
-from scipy.signal import sosfiltfilt,  iirdesign, sosfreqz
+from scipy.signal import sosfiltfilt,  iirdesign, sosfreqz, medfilt
 from scipy.interpolate import CubicSpline
 
 
-# %% Detrend polinomio grado 4
+def filtro_mediana (x, t, mostrar= False): #filtro de mediana para eliminar los outliers en hr
+
+    # Primera etapa: mediana con ventana 200 (aproximada con 201)
+    s_med_200 = medfilt(x, kernel_size=201)
+
+    # Segunda etapa: mediana con ventana 600 (aproximada con 601)
+    b = medfilt(s_med_200, kernel_size=601)
+
+    # Señal corregida (opcional)
+    HR_detrended = x - b
+
+    if mostrar:
+        plt.figure(figsize=(10, 6))
+
+        plt.plot(t, x, color='gray', alpha=0.6, label='Señal original $s(n)$')
+        plt.plot(t, b, color='red', linewidth=2, label='Baseline estimada $\\hat{b}(n)$')
+        plt.plot(t, HR_detrended, color='blue', linewidth=1, label='Señal corregida $s(n)-\\hat{b}(n)$')
+
+        plt.xlabel('Muestras (n)')
+        plt.ylabel('Amplitud')
+        plt.title('Eliminación de outliers mediante filtrado de mediana en cascada')
+        plt.legend()
+        plt.grid(True)
+
+        plt.tight_layout()
+        plt.show()
+
+    return HR_detrended
+
 
 def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
     """ 

@@ -19,18 +19,18 @@ import rr_hr
 def analizar_paciente(record_name):
 
     # %% lectura de archivo
-    ecg, t, fs, seizure_times, r_peaks = leer_archivo.leer_archivo(record_name)
+    ecg, t, fs, seizure_times, r_peaks = leer_archivo.leer_archivo(record_name, False)
 
-    # %% construccion intervalos RR y frecuencia cardiaca 
+    # %% construccion intervalos RR y frecuencia cardiaca + filtro de mediana
     rr, hr, t_hr=rr_hr.const_RR(r_peaks)
 
     # %% definicion ventana preictal y postictal
-    ventana_pre = [seizure_times[0][0] - 240, seizure_times[0][0]-120]
+    ventana_pre = [seizure_times[0][0] - 240, seizure_times[0][0]-70]
     mask_pre = (t_hr >= ventana_pre[0]) & (t_hr <= ventana_pre[1])
     hr_pre = hr[mask_pre]
     t_pre = t_hr[mask_pre]
 
-    ventana_post = [seizure_times[0][1]+120, seizure_times[0][1] + 300]
+    ventana_post = [seizure_times[0][1]+60, seizure_times[0][1] + 250]
     mask_post = (t_hr >= ventana_post[0]) & (t_hr <= ventana_post [1])
     hr_post = hr[mask_post]
     t_post = t_hr[mask_post]
@@ -38,6 +38,9 @@ def analizar_paciente(record_name):
     #rr_hr.chequeo(t_hr, hr, t_pre, hr_pre, t_post, hr_post, seizure_times)
 
     # %% detrend polinomio
+    #hr_med= filtrado_ecg.filtro_mediana(hr, t_hr)
+
+
     # TOTAL
     tu, hr_u, hr_dt, trend = filtrado_ecg.interp_y_detrend(t_hr, hr)
     # PRE
@@ -47,12 +50,12 @@ def analizar_paciente(record_name):
 
     # %% Espectro
     # por FFT
-    ff_pre_fft, psd_pre_fft= periodograma.transformada_rapida(hr_pre_dt, "FFT HR det pre")
-    ff_post_fft, psd_post_fft= periodograma.transformada_rapida(hr_post_dt, "FFT HR det post")
+    #ff_pre_fft, psd_pre_fft= periodograma.transformada_rapida(hr_pre_dt, "FFT HR det pre")
+    #ff_post_fft, psd_post_fft= periodograma.transformada_rapida(hr_post_dt, "FFT HR det post")
 
     # Welch
-    ff_pre_welch, psd_pre_welch= periodograma.welch_psd(hr_pre_dt)
-    ff_post_welch, psd_post_welch= periodograma.welch_psd(hr_post_dt)
+    #ff_pre_welch, psd_pre_welch= periodograma.welch_psd(hr_pre_dt)
+    #ff_post_welch, psd_post_welch= periodograma.welch_psd(hr_post_dt)
 
     # Resultados finales
     #periodograma.presentacion_datos(ff_pre_fft, psd_pre_fft, ff_post_fft, psd_post_fft, name="PSD HR FFT")
@@ -60,7 +63,6 @@ def analizar_paciente(record_name):
 
     # HR ya interpolada y detrendeada
     f_pre, P_pre, f_post, P_post = periodograma.fft_pre_post(hr_pre_dt, hr_post_dt)
-    
     return f_pre, P_pre, f_post, P_post, hr_dt, seizure_times, tu
    
 
