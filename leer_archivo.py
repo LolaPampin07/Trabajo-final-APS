@@ -1,9 +1,11 @@
+# %% librerias
 import wfdb
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 DB_PATH = "dat" #nombre de la carpeta donde esta la info
 
+#%% leer archivo --> paso el nombre del registro y devuelve los datos necesario de la base de datos: ecg, t, fs, seizure_times, r_peaks
 def leer_archivo(record_name="sz01", mostrar= False):
 
     # Leer el registro ECG 

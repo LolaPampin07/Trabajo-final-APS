@@ -14,8 +14,7 @@ import filtrado_ecg
 import periodograma
 import rr_hr
 
-# %% Invocacion de funciones presentacion de los datos
-
+# %% Analisis por paciente --> se pasa por parametro el nro de registro y retorna el esprecto preictal, el post ictal, el hr y el tiempo de episodio
 def analizar_paciente(record_name):
 
     # %% lectura de archivo
@@ -66,7 +65,7 @@ def analizar_paciente(record_name):
     return f_pre, P_pre, f_post, P_post, hr_dt, seizure_times, tu
    
 
-# %% main - PACIENTES 
+# %% main - PACIENTES --> llamo a analizar paciente y grafico el psd pre y post ictal de todos los pacientes
 
 def main():
 
@@ -151,9 +150,6 @@ def main():
 
     plt.tight_layout(rect=[0, 0.04, 1, 0.97])
     plt.show()
-
-
-
 
 if __name__=="__main__":
     main()

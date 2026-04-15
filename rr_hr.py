@@ -4,19 +4,14 @@ Created on Thu Feb 19 17:51:38 2026
 
 @author: lolyy
 """
+# %%librerias
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 import numpy as np
-import filtrado_ecg
-# %% Construccion temporal de HR a partir de latidos R (RR) y su interpolacion uniforme para FFT/PSD
-
-import numpy as np
-import matplotlib.pyplot as plt
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt
 
+# %% a partir de los latidos detectados automaticamente construyo el vector RR y luego obtengo la frec cardiaca instantanea
 def const_RR(latidos, mostrar=False):
     
     latidos = np.asarray(latidos) #lo convierto en array por las dudas
@@ -58,8 +53,7 @@ def const_RR(latidos, mostrar=False):
         plt.show()
 
     return rr_clean, hr_clean, t_hr
-
-
+# %% funcion que grafica los segmentos RR y el hr instantaneo
 def chequeo (t_hr, hr, t_pre, hr_pre, t_post, hr_post, seizure_time):
     plt.figure(figsize=(12,4))
     plt.plot(t_hr, hr, label='HR total', alpha=0.4)

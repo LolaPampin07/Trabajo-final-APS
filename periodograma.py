@@ -4,16 +4,13 @@ Created on Thu Feb 19 12:12:15 2026
 
 @author: lolyy
 """
-
+# %% Librerias
 from scipy.signal import welch, windows
 from numpy.fft import fft
 import numpy as np
 import matplotlib.pyplot as plt
 
-# %% resultados como en el paper
-import numpy as np
-import matplotlib.pyplot as plt
-
+#%% funciones para calcular y graficar el psd pre y post ictal
 def fft_pre_post(
     x_pre,
     x_post,

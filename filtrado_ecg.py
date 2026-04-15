@@ -13,7 +13,7 @@ from scipy import signal
 from scipy.signal import sosfiltfilt,  iirdesign, sosfreqz, medfilt
 from scipy.interpolate import CubicSpline
 
-
+# %% filtro de mediana para estimar y sustraer la linea de base
 def filtro_mediana (x, t, mostrar= False): #filtro de mediana para eliminar los outliers en hr
 
     # Primera etapa: mediana con ventana 200 (aproximada con 201)
@@ -43,7 +43,7 @@ def filtro_mediana (x, t, mostrar= False): #filtro de mediana para eliminar los 
 
     return HR_detrended
 
-
+# %% interpolacion para sustrar linea de base
 def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
     """ 
     tomo una frecuencia de muestreo regular, 4 es lo tipico para hr
@@ -51,8 +51,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
     x = hr [bpm]
     # IDEA: remover linea de tendencia c/ cuadrados minimos  
     """
-
-    # %% Preparo el eje del tiempo y la señal
+    #1. Preparo el eje del tiempo y la señal
     t = np.asarray(t).astype(float)
     x = np.asarray(x).astype(float)
 
@@ -68,21 +67,20 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
     uniq = np.diff(t, prepend=t[0]-1) > 0
     t, x = t[uniq], x[uniq]
 
-    # %% eje de timepo --> grid uniforme
+    # 2. eje de tiempo uniforme
     dt = 1 / fs
     tu = np.arange(t[0], t[-1], dt)
 
-    # %% interpolación
+    # 3. interpolación
     spline = CubicSpline(t, x, bc_type='natural')
     xu = spline(tu)
     
-    # detrend polinomial (grado  como el paper)
-    # para estabilidad numérica, centramos el tiempo4
-    tc = tu - tu.mean()
-    coef = np.polyfit(tc, xu, deg=deg) #utiliza cuadrados minimos
-    trend = np.polyval(coef, tc)
+    # detrend polinomial (grado 4 como el paper)
+    coef = np.polyfit(tu, xu, deg=deg) #utiliza cuadrados minimos
+    trend = np.polyval(coef, tu)
     xu_dt = xu - trend
-# %% grafico para ver resultados
+
+# %grafico para ver resultados
     if mostrar:
         plt.figure(figsize=(12,6))
 
@@ -230,55 +228,6 @@ def ecg_filter_butter(ecg, t,fs=200, mostrar= False):
         plt.show()
     return y
 
-
-# %%---------  FILTRO DE MEDIANA --------------
-
-# eliminacion de picos
-def filt_mediana (ecg):
-    filtrada = signal.medfilt(ecg, 11)
-    filtrada_600 = signal.medfilt(filtrada, 31)
-    
-    plt.figure(figsize=(15,5))
-    plt.title('Estimación')
-    plt.plot(ecg, label='ECG original')
-    plt.plot(filtrada, label='med_200')
-    plt.plot(filtrada_600, label='Estimador b')
-    plt.xlabel('Muestras')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-    
-    plt.figure(figsize=(15, 6))
-    plt.title('Filtrado')
-    plt.plot(ecg, label='ECG original')
-    plt.plot(ecg-filtrada_600, label='ECG filtrada')
-    plt.xlabel('Muestras')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-    
-    # # Subplot 1: ECG original
-    # plt.subplot(2, 1, 1)
-    # plt.plot(ecg, label='ECG original', color='tab:gray')
-    # plt.xlim (10000,12250)
-    # plt.title('ECG original')
-    # plt.ylabel('Amplitud')
-    # plt.grid(True)
-    # plt.legend()
-    
-    # # Subplot 2: ECG filtrado
-    # plt.subplot(2, 1, 2)
-    # plt.plot(ecg - filtrada_600, label='ECG filtrada', color='tab:blue')
-    # plt.title('ECG filtrada')
-    # plt.xlabel('Muestras')
-    # plt.ylabel('Amplitud')
-    # plt.grid(True)
-    # plt.legend()
-    
-    # plt.tight_layout()
-    # plt.show()
-
-    return
 
 # %% ---------  SPLINES CUBICOS --------------
 def splines_cubicos(ecg):
