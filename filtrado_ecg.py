@@ -106,9 +106,7 @@ def interp_y_detrend(t, x, fs=4.0, deg=4, method="cubic", mostrar= False):
 
 
 # %%Filtrado LINEAL ECG
-def ecg_filter_butter(ecg, t, mostrar= False):
-
-    fs = variables_globales.fs
+def ecg_filter_butter(ecg, t,fs=200, mostrar= False):
 
     # ---------- Parámetros de diseño ----------
     wp_band = np.array([1, 35])      # banda pasante [Hz]
@@ -233,8 +231,6 @@ def ecg_filter_butter(ecg, t, mostrar= False):
     return y
 
 
-# %% Filtrado no lineal
-
 # %%---------  FILTRO DE MEDIANA --------------
 
 # eliminacion de picos
@@ -251,8 +247,6 @@ def filt_mediana (ecg):
     plt.legend()
     plt.grid(True)
     plt.show()
-    
-
     
     plt.figure(figsize=(15, 6))
     plt.title('Filtrado')
